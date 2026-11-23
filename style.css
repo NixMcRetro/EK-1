@@ -300,6 +300,10 @@ footer {
   color: #72766f; text-align: center;
   margin: 24px 0 0; font-size: 11px; line-height: 1.5;
 }
+/* Wide screens display the complete 49-key manual without clipping C7. */
+@media (min-width: 1200px) {
+  .keys { min-width: 0; }
+}
 @media (max-width: 1280px) {
   .cabinet-top { grid-template-columns: minmax(72px, 10%) minmax(0, 1fr) minmax(72px, 10%); }
   .speaker { padding: 8px; }
