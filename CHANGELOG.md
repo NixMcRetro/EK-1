@@ -2,7 +2,20 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
-## [0.1.0] - Unreleased
+## [0.2.0] - Unreleased
+
+### Changed
+- Replaced the card-based web application layout with one physical keyboard-inspired faceplate.
+- Added simulated speaker grilles, printed tone/rhythm charts, a recessed LCD and period-style labelled controls.
+- Improved mobile keyboard navigation with octave scroll buttons and a playable middle-octave starting position.
+- Added automatic screenshot artifacts for desktop and mobile visual review.
+- Updated version and cross-browser regression coverage.
+
+### Unchanged
+- Twelve tones, six rhythms, five original sixteen-bar demo songs and in-memory recording.
+- Standalone source repository, with no automatic McRetro website publication.
+
+## [0.1.0] - Initial development baseline
 
 ### Added
 - Independent electronic keyboard application with 49 playable keys.
