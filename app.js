@@ -1,8 +1,8 @@
-/* Electronic Keyboard (Model EK-1) v0.1.0. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.2.0. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.1.0';
+  const VERSION = '0.2.0';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -470,6 +470,32 @@
       keyElements.set(midi, element);
     }
   }
+  // Move by one white-key octave on small screens; no modification to note pitch.
+  function setupKeyboardNavigation() {
+    const viewport = document.querySelector('.keyboard-scroll');
+    const bed = $('keys');
+    const left = $('keyLeft'), right = $('keyRight');
+    const octavePixels = () => bed.scrollWidth * 7 / 29;
+    function updateButtons() {
+      const maximum = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      left.disabled = viewport.scrollLeft <= 2;
+      right.disabled = viewport.scrollLeft >= maximum - 2;
+    }
+    function nudge(direction) {
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      viewport.scrollBy({ left: direction * octavePixels(), behavior: reduced ? 'instant' : 'smooth' });
+    }
+    left.addEventListener('click', () => nudge(-1));
+    right.addEventListener('click', () => nudge(1));
+    viewport.addEventListener('scroll', updateButtons, {passive:true});
+    window.addEventListener('resize', updateButtons);
+    // On a phone begin at C4 (where the computer-key shortcuts begin).
+    // The full C3 chord octave remains one swipe to the left.
+    requestAnimationFrame(() => {
+      if (window.innerWidth <= 620) viewport.scrollLeft = Math.max(0, octavePixels() - 8);
+      updateButtons();
+    });
+  }
   function setupKeyboardShortcuts() {
     const shortcutMap = new Map(SHORTCUTS.map((key, i) => [key, 60 + i]));
     document.addEventListener('keydown', event => {
@@ -536,7 +562,7 @@
     $('record').addEventListener('click', toggleRecord);
     $('playTake').addEventListener('click', playTake);
     $('clearTake').addEventListener('click', () => { take = []; stopTransport(); reflectButtons(); show('RECORDING CLEARED', 'READY TO PLAY'); });
-    buildKeys(); setupKeyboardShortcuts(); reflectButtons();
+    buildKeys(); setupKeyboardShortcuts(); setupKeyboardNavigation(); reflectButtons();
   }
   initialize();
   // Read-only diagnosis surface for automated browser regressions, not an end-user API.
