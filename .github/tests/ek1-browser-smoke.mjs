@@ -1,11 +1,13 @@
-// Electronic Keyboard (Model EK-1) v0.1.0 browser regression.
+// Electronic Keyboard (Model EK-1) v0.2.0 browser regression.
 // Run with: node .github/tests/ek1-browser-smoke.mjs
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
+import {mkdirSync} from 'node:fs';
 import {chromium, firefox, webkit} from 'playwright';
 
 const url = pathToFileURL(resolve('index.html')).href;
+mkdirSync('artifacts', {recursive:true});
 for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
   const browser = await browserType.launch({headless:true});
   try {
@@ -15,7 +17,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(url, {waitUntil:'load'});
       await page.waitForFunction(() => !!window.EK1);
-      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.1\.0/);
+      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.2\.0/);
       const info = await page.evaluate(() => ({
         version: EK1.version,
         tones: EK1.tones,
@@ -24,13 +26,18 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         bars: Array.from({length:EK1.demos}, (_,i) => EK1.demoBars(i)),
         events: Array.from({length:EK1.demos}, (_,i) => EK1.demoEvents(i))
       }));
-      assert.equal(info.version, '0.1.0');
+      assert.equal(info.version, '0.2.0');
       assert.deepEqual([info.tones,info.rhythms,info.demos], [12,6,5]);
       assert.deepEqual(info.bars, [16,16,16,16,16]);
       for (const [i,events] of info.events.entries()) {
         assert(events.length >= 60, 'Demo ' + i + ' is not a complete arrangement');
         assert(events.every(e => e.step >= 0 && e.step < 256 && e.midi >= 48 && e.midi <= 96 && e.length > 0));
       }
+      // A cohesive instrument chassis with printed tone/rhythm guides, not generic cards.
+      assert.equal(await page.locator('.speaker-grille').count(), 2);
+      assert.equal(await page.locator('.display-well').count(), 1);
+      assert.equal(await page.locator('.printed-bank').count(), 2);
+      assert.equal(await page.locator('.instrument .control-group').count(), 3);
       assert.equal(await page.locator('#keys .key').count(), 49);
       assert.equal(await page.locator('#keys .key.white').count(), 29);
       assert.equal(await page.locator('#keys .key.black').count(), 20);
@@ -38,6 +45,20 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       assert.equal(await page.locator('#rhythm option').count(), 6);
       assert.equal(await page.locator('#demoSong option').count(), 5);
       assert.deepEqual(await page.evaluate(() => EK1.parseBar('C4:1 E4:1 G4:2').map(n => n.length)), [1,1,2]);
+      if (width === 390) {
+        assert(await page.locator('.mobile-key-nav').isVisible());
+        assert(!(await page.locator('.speaker-grille').first().isVisible()));
+        await page.waitForFunction(() => document.querySelector('.keyboard-scroll').scrollLeft > 150);
+        const start = await page.locator('.keyboard-scroll').evaluate(e => e.scrollLeft);
+        await page.locator('#keyLeft').click();
+        await page.waitForFunction(prev => document.querySelector('.keyboard-scroll').scrollLeft < prev - 100, start);
+        await page.locator('#keyRight').click();
+        await page.waitForFunction(prev => document.querySelector('.keyboard-scroll').scrollLeft > prev + 100, start - 100);
+      } else if (width === 1280) {
+        assert(await page.locator('.speaker-grille').first().isVisible());
+      }
+      // Capture desktop/mobile appearances for human review of the physical design.
+      await page.screenshot({path: 'artifacts/ek1-v0.2.0-' + name + '-' + width + '.png', fullPage:true});
       await page.locator('#tone').selectOption('5');
       assert.match(await page.locator('#displayMain').textContent(),/TRUMPET/);
       await page.locator('#playDemo').click();
