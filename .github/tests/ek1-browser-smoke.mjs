@@ -47,6 +47,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       assert.deepEqual(await page.evaluate(() => EK1.parseBar('C4:1 E4:1 G4:2').map(n => n.length)), [1,1,2]);
       if (width === 390) {
         assert(await page.locator('.mobile-key-nav').isVisible());
+        assert.equal(await page.locator('.key.white').first().evaluate(el => getComputedStyle(el).touchAction), 'pan-x', 'Touch gestures should scroll the keys');
         assert(!(await page.locator('.speaker-grille').first().isVisible()));
         await page.waitForFunction(() => document.querySelector('.keyboard-scroll').scrollLeft > 150);
         const start = await page.locator('.keyboard-scroll').evaluate(e => e.scrollLeft);
