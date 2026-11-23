@@ -57,6 +57,8 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         await page.waitForFunction(prev => document.querySelector('.keyboard-scroll').scrollLeft > prev + 100, start - 100);
       } else if (width === 1280) {
         assert(await page.locator('.speaker-grille').first().isVisible());
+        const clippedKeys = await page.locator('.keyboard-scroll').evaluate(el => el.scrollWidth - el.clientWidth);
+        assert(clippedKeys <= 2, 'All 49 keys should fit a wide desktop screen');
       }
       // Capture desktop/mobile appearances for human review of the physical design.
       await page.screenshot({path: 'artifacts/ek1-v0.2.0-' + name + '-' + width + '.png', fullPage:true});
