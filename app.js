@@ -483,7 +483,7 @@
     }
     function nudge(direction) {
       const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      viewport.scrollBy({ left: direction * octavePixels(), behavior: reduced ? 'instant' : 'smooth' });
+      viewport.scrollBy({ left: direction * octavePixels(), behavior: reduced ? 'auto' : 'smooth' });
     }
     left.addEventListener('click', () => nudge(-1));
     right.addEventListener('click', () => nudge(1));
