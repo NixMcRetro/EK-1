@@ -4,7 +4,7 @@
 
 EK-1 brings the feel of a classic home keyboard to your browser. Play a few notes, experiment with instruments, enjoy the built-in demo songs, or make a song of your own. No music theory required.
 
-[Project home](README.md) - [Play online](https://mcretro.net/goodies/ek-1/) - [Download EK-1](https://github.com/NixMcRetro/EK-1/releases) - [Quick-start guide](START-HERE.txt) - [Version history](CHANGELOG.md)
+[Project home](README.md) - [Play online](https://mcretro.net/homepages/ek-1/) - [Download EK-1](https://github.com/NixMcRetro/EK-1/releases) - [Quick-start guide](START-HERE.txt) - [Version history](CHANGELOG.md)
 
 ## 🚀 Getting started
 

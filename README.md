@@ -4,7 +4,7 @@
 
 No downloads needed to play online. No installation, accounts, or music theory required. Just pick a voice and make some noise! 🎶
 
-[**▶ Play on McRetro.net**](https://mcretro.net/goodies/ek-1/) | [**📦 Download v1.0.1**](https://github.com/NixMcRetro/EK-1/releases/tag/v1.0.1)
+[**▶ Play on McRetro.net**](https://mcretro.net/homepages/ek-1/) | [**📦 Download v1.0.1**](https://github.com/NixMcRetro/EK-1/releases/tag/v1.0.1)
 
 ## ✨ What's inside?
 
