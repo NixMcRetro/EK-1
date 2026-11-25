@@ -1,8 +1,8 @@
-/* Electronic Keyboard (Model EK-1) v0.2.0. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.3.0. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.2.0';
+  const VERSION = '0.3.0';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -107,6 +107,7 @@
   let ctx, master, noise, transport = null, loop = null, endTimer = null;
   let tone = 0, rhythm = 0, tempo = 116, volume = .7, melodyOff = false, autoChord = false;
   let heldChord = null, recording = false, take = [], takeStart = 0, recordTimer = null;
+  let importedMidi = null, midiName = '', importRequest = 0;
   const held = new Map(), pending = new Set(), cancelled = new Set(), lights = new Map(), timers = new Set(), keyElements = new Map();
   const noteToMidi = s => {
     const m = /^([A-G])([#b]?)(-?[0-9]+)$/.exec(s);
@@ -174,6 +175,11 @@
     $('accomp').setAttribute('aria-pressed', String(autoChord));
     $('playTake').disabled = take.length === 0 || recording;
     $('clearTake').disabled = take.length === 0 || recording;
+    $('exportTake').disabled = take.length === 0 || recording;
+    $('playMidi').disabled = !importedMidi || recording;
+    $('playMidi').textContent = transport?.type === 'midi' ? 'STOP MIDI' : 'PLAY MIDI';
+    $('saveMidi').disabled = !importedMidi;
+    $('openMidi').disabled = recording;
   }
   function createBus() {
     const bus = ctx.createGain();
@@ -281,6 +287,9 @@
     if (loop) { clearInterval(loop); loop = null; }
     if (endTimer) { clearTimeout(endTimer); endTimer = null; }
     clearLamps();
+    if (transport?.type === 'midi' && ctx) {
+      transport.active.forEach(n => n.sound.release(ctx.currentTime));
+    }
     if (transport?.bus && ctx) {
       const b = transport.bus, now = ctx.currentTime;
       b.gain.cancelScheduledValues(now);
@@ -382,7 +391,7 @@
         take.push({ midi, tone, t: Math.max(0, ctx.currentTime - takeStart), length: null });
         held.get(token).takeIndex = take.length - 1;
       }
-      if (transport?.type !== 'demo') show(('0' + (tone + 1)).slice(-2) + ' ' + TONES[tone].name.toUpperCase(), 'KEY ' + label(midi) + (recording ? ' • RECORDING' : ''));
+      if (transport?.type !== 'demo' && transport?.type !== 'midi') show(('0' + (tone + 1)).slice(-2) + ' ' + TONES[tone].name.toUpperCase(), 'KEY ' + label(midi) + (recording ? ' • RECORDING' : ''));
     }
     keyElements.get(midi)?.classList.add('pressed');
   }
@@ -392,7 +401,7 @@
     if (!entry) return;
     held.delete(token);
     entry.sound.release(ctx.currentTime);
-    if (entry.takeIndex !== undefined) take[entry.takeIndex].length = Math.max(.08, ctx.currentTime - entry.started);
+    if (recording && entry.takeIndex !== undefined && take[entry.takeIndex]) take[entry.takeIndex].length = Math.max(.08, ctx.currentTime - entry.started);
     if (![...held.values()].some(x => x.midi === entry.midi)) keyElements.get(entry.midi)?.classList.remove('pressed');
   }
   function endRecord() {
@@ -407,6 +416,7 @@
     if (recording) { endRecord(); return; }
     if (!await audio()) return;
     stopTransport(false);
+    stopHeld();
     take = []; takeStart = ctx.currentTime; recording = true;
     recordTimer = setTimeout(endRecord, 120000);
     reflectButtons();
@@ -427,6 +437,67 @@
     endTimer = setTimeout(() => { stopTransport(); show('PLAYBACK FINISHED', take.length + ' RECORDED NOTES'); }, (end + .8) * 1000);
     reflectButtons();
     show('PLAYING RECORDING', take.length + ' NOTES');
+  }
+  // File selection never uploads data; the codec processes bytes in this tab.
+  function midiMessage(text) { $('midiStatus').textContent = text; }
+  async function openMidi(file) {
+    if (!file || recording) return;
+    const id=++importRequest;
+    try {
+      if(file.size>EK1MIDI.MAX_BYTES)throw Error('MIDI files are limited to 8 MB.');
+      const parsed=EK1MIDI.parse(await file.arrayBuffer());
+      if(id!==importRequest)return;
+      if(transport?.type==='midi')stopTransport(false);
+      importedMidi=parsed; midiName=file.name;
+      const seconds=Math.round(parsed.duration), length=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
+      midiMessage(midiName+' | '+parsed.notes.length+' notes | '+parsed.channels.length+' parts | '+length);
+      show('MIDI READY', 'PRESS PLAY MIDI');
+    } catch(e) {
+      if(id===importRequest)midiMessage('Could not open MIDI: '+e.message+(importedMidi?' (previous song kept)':''));
+    }
+    reflectButtons();
+  }
+  function downloadMidi(bytes,name) {
+    const url=URL.createObjectURL(new Blob([bytes],{type:'audio/midi'}));
+    const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  function midiTick() {
+    const tr=transport;
+    if(!tr||tr.type!=='midi')return;
+    const now=ctx.currentTime;
+    tr.active=tr.active.filter(n=>n.end>now);
+    // Schedule only a short window of music. Cap per-tick work and polyphony
+    // to keep even dense imported files from overwhelming the browser.
+    let work=0;
+    while(tr.index<tr.song.notes.length && tr.start+tr.song.notes[tr.index].time<now+.13 && work++<128){
+      const n=tr.song.notes[tr.index++], at=tr.start+n.time, end=at+n.duration;
+      if(end<=now)continue;
+      const begin=Math.max(at,now);
+      if(n.channel===9){
+        if(at>=now-.12)drum(EK1MIDI.drumFor(n.key),begin,n.velocity/127*.55,tr.bus);
+      }else if(tr.active.length<64){
+        const sound=voice(n.key,begin,Math.max(.01,end-begin),EK1MIDI.toneFor(n.program),n.velocity/127*.23,tr.bus);
+        tr.active.push({sound,end:end+.7});
+        lamp(n.key,begin,Math.max(.01,end-begin));
+      }
+    }
+    if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){
+      stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');
+    }
+  }
+  async function playMidi() {
+    if(transport?.type==='midi'){stopTransport();return;}
+    if(!importedMidi||recording||!await audio())return;
+    stopTransport(false);
+    transport={type:'midi',song:importedMidi,index:0,start:ctx.currentTime+.08,active:[],bus:createBus()};
+    loop=setInterval(midiTick,25);reflectButtons();
+    show('MIDI PLAYBACK','PLAY ALONG ON THE KEYS');midiTick();
+  }
+  function exportTakeMidi(){
+    if(!take.length||recording)return;
+    try{downloadMidi(EK1MIDI.encodeTake(take),'EK-1-recording.mid');midiMessage('Recording exported as MIDI.');}
+    catch(e){midiMessage('Could not export recording: '+e.message);}
   }
   function buildKeys() {
     const bed = $('keys');
@@ -562,6 +633,11 @@
     $('record').addEventListener('click', toggleRecord);
     $('playTake').addEventListener('click', playTake);
     $('clearTake').addEventListener('click', () => { take = []; stopTransport(); reflectButtons(); show('RECORDING CLEARED', 'READY TO PLAY'); });
+    $('openMidi').addEventListener('click', () => $('midiFile').click());
+    $('midiFile').addEventListener('change', e => { const file=e.target.files[0]; e.target.value=''; openMidi(file); });
+    $('playMidi').addEventListener('click', playMidi);
+    $('saveMidi').addEventListener('click', () => { if(importedMidi)downloadMidi(importedMidi.bytes,midiName); });
+    $('exportTake').addEventListener('click', exportTakeMidi);
     buildKeys(); setupKeyboardShortcuts(); setupKeyboardNavigation(); reflectButtons();
   }
   initialize();
@@ -571,7 +647,7 @@
     tones: TONES.length,
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
-    get state() { return { transport: transport?.type || 'stopped', recording, takeNotes: take.length, demoIndex: transport?.song ?? null, autoChord, melodyOff }; },
+    get state() { return { transport: transport?.type || 'stopped', recording, takeNotes: take.length, demoIndex: transport?.type === 'demo' ? transport.song : null, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0 }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoBars: index => SONGS[index]?.bars,
     parseBar
