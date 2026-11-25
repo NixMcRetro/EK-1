@@ -2,9 +2,9 @@
 
 A simple, 1990s home-keyboard-inspired instrument that plays in your browser.
 
-**Development version: 0.5.0**
+**Development version: 0.6.0**
 
-Play a 49-key electronic keyboard, choose from 12 instrument tones and 6 rhythms, and listen to five original built-in demo songs. Includes one-finger chord accompaniment, a melody-off play-along mode, and basic note recording.
+Play a 49-key electronic keyboard, choose from 20 built-in voices (12 classic and 8 FM) and 6 rhythms, and listen to five original built-in demo songs. Includes one-finger chord accompaniment, a melody-off play-along mode, and basic note recording.
 
 EK-1 is an original instrument and is not affiliated with Casio.
 
@@ -17,6 +17,12 @@ Computer keyboard shortcuts play two octaves: `Z S X D C V G B H N J M` and `Q 2
 ### Design
 
 EK-1 v0.2.0 deliberately borrows **design principles**, not branding or artwork, from late-1980s and early-1990s home keyboards. It uses a one-piece dark instrument chassis, a small recessed green LCD, speaker grilles, printed sound lists, square tactile controls and a full-width piano manual. Desktop and mobile Playwright screenshots are uploaded with the GitHub Actions test run for review. See [DESIGN.md](DESIGN.md) for reference links and implementation guidelines.
+
+## Choosing a voice
+
+Use the single VOICE menu on the instrument. It groups Classic keyboard, FM synthesis and any loaded SoundFont voices. The active engine is shown beside the selector. FM shaping controls appear on the faceplate only while an FM voice is selected. Selecting a classic or FM voice does not unload a SoundFont; MIDI songs continue to use the loaded bank, while the keys can play any engine. To remove an imported bank, use REMOVE SOUNDFONT.
+
+The voice and shaping controls are locked during a recording to preserve its instrument. A SoundFont recording plays with its original bank while that bank remains loaded; if the bank is removed or replaced, playback uses a built-in approximation and displays a warning.
 
 ## MIDI songs
 
@@ -42,7 +48,7 @@ Open http://127.0.0.1:8000/ in your browser. Deployed builds need HTTPS and the 
 1. Press OPEN SOUNDFONT and choose a local SF2 or SF3 bank (up to 128 MB).
 2. Select a melodic preset in VOICE, then play the keyboard.
 3. Open and play a MIDI file to hear the bank's instruments. For accurate instrument assignments, use a complete General MIDI bank.
-4. Return to the original tones with BUILT-IN SOUNDS.
+4. Choose a Classic keyboard or FM synthesis voice in the same VOICE menu to switch without unloading the bank. Use REMOVE SOUNDFONT when you want to remove it.
 
 The bank is processed in your browser and is never uploaded or persisted. A separate keyboard channel allows play-along while a song uses MIDI channels 1–16. Built-in demos, rhythm and automatic accompaniment retain their original synthesizer. MIDI recording export includes bank/program numbers, not embedded samples. The sound may differ if a receiving player lacks the same bank. Imported MIDI uses the existing bounded note/tempo scheduler; this does not implement all MIDI controllers, pitch bend or complete GM/GS/XG playback yet. A bank is not bundled with this development version. Load your own legitimately obtained SoundFont.
 
@@ -50,9 +56,9 @@ The optional AudioWorklet engine is [SpessaSynth](https://github.com/spessasus/s
 
 ## FM synthesis
 
-Press FM SYNTH below the keyboard and choose one of eight original voices: Electric Tines, Crystal Bells, Rubber Bass, Digital Brass, Glass Pad, Reed Lead, Drawbar Organ and Digital Pluck.
+Choose an FM synthesis voice in the main VOICE menu. The eight original voices are: Electric Tines, Crystal Bells, Rubber Bass, Digital Brass, Glass Pad, Reed Lead, Drawbar Organ and Digital Pluck.
 
-Brightness changes frequency-modulation depth; Attack changes the onset time; Release changes the fade after lifting a key. Settings apply to newly played notes. RESET SOUND restores the preset envelope and modulation depth. Toggle FM SYNTH off to return to built-in voices. Loading a SoundFont also returns the FM switch to off.
+Brightness changes frequency-modulation depth; Attack changes the onset time; Release changes the fade after lifting a key. Settings apply to newly played notes. RESET SOUND restores the preset envelope and modulation depth. Choose a Classic keyboard or SoundFont voice in the same menu to leave FM mode. Loading a SoundFont automatically selects its first melodic voice.
 
 The native Web Audio engine uses six sine-wave operators per note with independent amplitude envelopes and several routing topologies. It does not emulate the Yamaha DX7, import DX7 SysEx patches, or implement its exact algorithms. All voice settings are original. FM recordings preserve their settings for in-memory playback, while MIDI export uses an approximate standard program number; a MIDI file does not store the FM patch. Imported MIDI, demo songs and rhythm accompaniment continue using the established playback engines.
 
@@ -60,7 +66,7 @@ FM works without external dependencies, including in the standalone HTML preview
 
 ## Development status
 
-Version `0.5.0` introduces original six-operator FM synthesis, and is not a stable `1.0.0`. Note recordings currently live in memory and disappear when the page reloads. They capture played notes, not the full accompanying rhythm track.
+Version `0.6.0` unifies the voice controls across all three sound engines, and is not a stable `1.0.0`. Note recordings currently live in memory and disappear when the page reloads. They capture played notes, not the full accompanying rhythm track.
 
 The included tones are created using Web Audio synthesis, not sampled patches from an existing manufacturer.
 
@@ -74,7 +80,8 @@ EK-1 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) with `MA
 - `0.3.0`: MIDI file import, multichannel playback and export
 - `0.4.0`: optional SF2/SF3 playback with a locally built AudioWorklet engine
 - `0.5.0`: original six-operator FM synthesis and eight voices
-- `0.6.0`: proposed industrial interface refinement
+- `0.6.0`: unified voice selector and contextual sound shaping
+- `0.7.0`: proposed music composition
 - `1.0.0`: first stable release
 - After `1.0.0`: PATCH for compatible fixes, MINOR for compatible features, MAJOR for breaking changes
 
