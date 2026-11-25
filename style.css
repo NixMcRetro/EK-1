@@ -379,3 +379,13 @@ footer {
 .bank-preset { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:800; }
 .bank-preset select { max-width:230px; min-width:100px; min-height:38px; font-size:12px; padding:6px; background:#f0eee4; color:#28322a; border:1px solid #535d54; border-radius:2px; }
 @media(max-width:760px){ .bank-preset { flex:1 1 100%; } .bank-preset select { flex:1; max-width:100%; min-width:0; min-height:44px; } }
+
+.fm-shaping { grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:12px;align-items:end; }
+.fm-shaping label { display:grid;grid-template-columns:1fr auto;gap:4px;font-size:10px;font-weight:800;letter-spacing:.04em;min-width:0; }
+.fm-shaping input { grid-column:1/-1;width:100%;accent-color:#536853; }
+.fm-shaping output { font:700 11px "Courier New",monospace; }
+.fm-shaping button { min-height:38px;padding:7px 11px;background:#f0eee4;color:#28322a;border:1px solid #535d54;border-bottom:3px solid #535d54;border-radius:2px;font-size:10px;font-weight:800; }
+.fm-shaping :disabled { opacity:.45; }
+.midi-controls #fmToggle[aria-pressed=true] { background:#b9c9ae;color:#182d21;border-bottom-color:#607456; }
+.fm-shaping input:focus-visible,.fm-shaping button:focus-visible { outline:3px solid #384e36;outline-offset:3px; }
+@media(max-width:620px){.fm-shaping {grid-template-columns:repeat(2,minmax(0,1fr));}.fm-shaping button {min-height:44px;}}
