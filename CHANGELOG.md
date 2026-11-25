@@ -2,6 +2,13 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.4] - Compact instrument polish
+
+- Bounded undo/redo history and compact song structure navigation, with section duplication.
+- Collapsible chord and melody editor; no extra faceplate controls.
+- Optional session-local instrument favourites, room reverb and chorus in Sound options.
+- Effects are off by default, pass through the existing protected output stage and can be included in WAV/MP3 exports.
+
 ## [0.9.3] - Output level protection and Song Builder navigation
 
 - Lower 25% startup volume, visible percentage, conservative engine trims, shared compressor and bounded output stage.

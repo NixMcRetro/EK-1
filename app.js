@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v0.9.3. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.9.4. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.9.3';
+  const VERSION = '0.9.4';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -111,6 +111,7 @@
   let importedMidi = null, midiName = '', importRequest = 0;
   let bank = null, bankLoading = false, bankFileRef = null;
   let engine='classic', fmIndex=0, bankVoiceIndex=0, bankGeneration=0;
+  const effects={reverb:0,chorus:0},favourites=new Map();
   const fmSettings={brightness:1,attack:1,release:1};
   const held = new Map(), pending = new Set(), cancelled = new Set(), lights = new Map(), timers = new Set(), keyElements = new Map();
   const noteToMidi = s => {
@@ -180,7 +181,7 @@
       if (!Audio) { show('AUDIO NOT SUPPORTED', 'Use a browser with Web Audio'); return false; }
       ctx = new Audio();
       outputMeter=ctx.createAnalyser();outputMeter.fftSize=2048;outputMeter.connect(ctx.destination);
-      outputStage=EK1Levels.create(ctx,outputMeter,volume);
+      outputStage=EK1Levels.create(ctx,outputMeter,volume,effects);
       master=outputStage.input;
       noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const data = noise.getChannelData(0);
@@ -218,6 +219,7 @@
     $('openBank').disabled = bankLoading || recording || !!window.EK1Standalone;
     $('closeBank').disabled = !bank || bankLoading || recording;
     $('tone').disabled = recording || bankLoading;
+    refreshFavourites();
     $('activeEngine').textContent = engine==='soundfont'?'SOUNDFONT':engine==='fm'?'FM':'CLASSIC';
     $('fmPanel').hidden = engine!=='fm';
     for(const id of ['fmBrightness','fmAttack','fmRelease','fmReset'])$(id).disabled=engine!=='fm'||recording||bankLoading;
@@ -614,6 +616,19 @@
     if(engine==='fm')return EK1FM.presets[fmIndex].name.toUpperCase();
     return String(tone+1).padStart(2,'0')+' '+TONES[tone].name.toUpperCase();
   }
+  function favouriteId(value){return value.startsWith('sf-')?bankGeneration+':'+value:value;}
+  function refreshFavourites(){
+    const toneMenu=$('tone'),value=toneMenu.value,id=favouriteId(value),toggle=$('favouriteVoice'),menu=$('favouriteList');
+    toggle.textContent=favourites.has(id)?'REMOVE FAVOURITE':'FAVOURITE CURRENT VOICE';
+    toggle.setAttribute('aria-pressed',String(favourites.has(id)));
+    toggle.disabled=recording||bankLoading||(!favourites.has(id)&&favourites.size>=64);
+    const previous=menu.value;
+    const choices=[...favourites.values()].filter(p=>[...toneMenu.options].some(o=>o.value===p.value)&&(!p.value.startsWith('sf-')||p.generation===bankGeneration));
+    menu.replaceChildren(new Option(choices.length?'Choose a favourite…':'No favourites yet',''),...choices.map(p=>new Option(p.label,p.value)));
+    menu.value=choices.some(p=>p.value===previous)?previous:'';
+    menu.disabled=recording||bankLoading||!choices.length;
+  }
+  function clearBankFavourites(){for(const [id,p] of favourites)if(p.value.startsWith('sf-'))favourites.delete(id);}
   function rebuildVoices(){
     const group=(label,options)=>{
       const g=document.createElement('optgroup');g.label=label;
@@ -660,7 +675,7 @@
       // Keep the previous bank if validation or engine loading fails.
       const next=await EK1SoundFont.create(ctx,master,bytes);
       if(transport)stopTransport(false);stopHeld();
-      bank?.destroy();bank=next;bankFileRef=file;bankGeneration++;bankVoiceIndex=0;engine='soundfont';rebuildVoices();updateFM();
+      bank?.destroy();clearBankFavourites();bank=next;bankFileRef=file;bankGeneration++;bankVoiceIndex=0;engine='soundfont';rebuildVoices();updateFM();
       bankMessage(file.name+' | '+bank.presets.length+' melodic voices');
       show('SOUNDFONT READY',bank.selected.name.toUpperCase());
     }catch(e){bankMessage('Could not open SoundFont: '+e.message+(bank?' (previous bank kept)':''));}
@@ -668,7 +683,7 @@
   }
   function unloadBank(){
     if(!bank||bankLoading||recording)return;
-    stopTransport(false);stopHeld();bank.destroy();bank=null;bankFileRef=null;
+    stopTransport(false);stopHeld();bank.destroy();clearBankFavourites();bank=null;bankFileRef=null;
     if(engine==='soundfont')engine='classic';
     rebuildVoices();updateFM();
     bankMessage('20 built-in voices. Add a local SoundFont to expand the voice menu.');
@@ -760,6 +775,23 @@
     $('rhythm').replaceChildren(...RHYTHMS.map((p, i) => new Option(('0' + (i + 1)).slice(-2) + ' ' + p.name, String(i))));
     $('demoSong').replaceChildren(...SONGS.map((p, i) => new Option(('0' + (i + 1)).slice(-2) + ' ' + p.title, String(i))));
     $('tone').addEventListener('change', selectVoice);
+    $('favouriteVoice').addEventListener('click',()=>{
+      if(recording||bankLoading)return;
+      const option=$('tone').selectedOptions[0],value=option.value,id=favouriteId(value);
+      if(favourites.has(id))favourites.delete(id);
+      else if(favourites.size<64)favourites.set(id,{value,label:option.textContent,generation:bankGeneration});
+      refreshFavourites();
+    });
+    $('favouriteList').addEventListener('change',()=>{
+      const value=$('favouriteList').value;
+      if(recording||bankLoading||!value)return;
+      $('tone').value=value;selectVoice();
+    });
+    for(const name of ['reverb','chorus'])$('effect-'+name).addEventListener('input',()=>{
+      effects[name]=Number($('effect-'+name).value)/100;
+      $('effect-'+name+'Value').textContent=Math.round(effects[name]*100)+'%';
+      outputStage?.setEffects(effects);
+    });
     $('rhythm').addEventListener('change', () => { rhythm = Number($('rhythm').value); if (transport?.type === 'rhythm') beginRhythm(); else show(RHYTHMS[rhythm].name.toUpperCase(), 'RHYTHM SELECTED'); });
     $('tempo').addEventListener('input', () => {
       tempo = Number($('tempo').value);
@@ -838,7 +870,7 @@
     async renderComposition(bytes,rate,progress,signal){
       if(recording||bankLoading)throw Error("Finish recording or loading your bank first.");
       if(transport)stopTransport(false);stopHeld();
-      return EK1AudioExport.render(EK1MIDI.parse(bytes),rate,bankFileRef,volume,voice,drum,progress,signal);
+      return EK1AudioExport.render(EK1MIDI.parse(bytes),rate,bankFileRef,volume,voice,drum,progress,signal,{...effects});
     },
     stopComposition(){if(transport?.composing)stopTransport();},
     downloadComposition(bytes){downloadMidi(bytes,'EK-1-song.mid');},

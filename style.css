@@ -443,3 +443,12 @@ footer {
 .compose-editor>summary{font-size:12px;font-weight:700;cursor:pointer;padding:5px 0;color:#374437}
 .compose-editor>summary:focus-visible{outline:2px solid #384e36;outline-offset:2px}
 @media(max-width:760px){.song-builder .section-chip{min-height:44px}.compose-overview-heading{flex-wrap:wrap}}
+
+.sound-options{grid-column:1/-1;border-top:1px solid #b4b9ae;padding:8px 0 2px;color:#374437;font-size:12px}
+.sound-options>summary{cursor:pointer;font-weight:700}
+.sound-options-row{display:flex;align-items:end;flex-wrap:wrap;gap:9px;margin:9px 0}
+.sound-options-row label{display:grid;grid-template-columns:1fr auto;gap:4px;min-width:130px;max-width:100%;font-size:10px;font-weight:800}
+.sound-options-row label select,.sound-options-row label input{grid-column:1/-1;max-width:100%;min-width:0}
+.sound-options-row label input{accent-color:#536853}
+.sound-options-row label select{max-width:260px}
+.sound-options button[aria-pressed=true]{background:#536853;color:#fff}

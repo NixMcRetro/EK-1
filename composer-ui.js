@@ -44,7 +44,7 @@
        [...overview.children].forEach((el,j)=>el.setAttribute('aria-pressed',String(j===i)));
        $('composeDuplicate').disabled=exporting||song.bars.length+section.end-section.start>64;
        const row=$('composeRows').children[section.start];
-       if(row){row.scrollIntoView({block:'nearest',behavior:'auto'});}
+       if(row){document.querySelector('.compose-editor').open=true;row.scrollIntoView({block:'nearest',behavior:'auto'});}
      });overview.append(button);
    });
    const section=list[selectedSection];
