@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
   <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twelve tones, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.3.0</title>
+  <title>Electronic Keyboard (Model EK-1) v0.4.0</title>
   <link rel="stylesheet" href="./style.css">
   <script src="./midi.js" defer></script>
+  <script src="./soundfont.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -21,7 +22,7 @@
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
         <span class="product-spec">49 KEYS · DIGITAL SOUND</span>
-        <span class="version">v0.3.0</span>
+        <span class="version">v0.4.0</span>
       </div>
     </header>
 
@@ -120,9 +121,19 @@
       <button id="saveMidi" type="button" disabled>SAVE MIDI COPY</button>
       <button id="exportTake" type="button" disabled>EXPORT RECORDING</button>
     </div>
-    <p class="midi-note">MIDI stores notes, not audio. Imported parts use EK-1's current twelve sounds; full General MIDI instrument banks are planned for a later version.</p>
+    <p class="midi-note">MIDI stores notes, not audio. Imported songs use built-in approximations or the selected SoundFont bank.</p>
   </section>
 
+  <section class="midi-strip soundfont-strip" aria-labelledby="bankHeading">
+    <div class="midi-info"><h2 id="bankHeading">INSTRUMENT BANK</h2><p id="bankStatus" role="status" aria-live="polite">Built-in sounds. Open an SF2 or SF3 bank for sampled instruments.</p></div>
+    <div class="midi-controls">
+      <input id="bankFile" type="file" accept=".sf2,.sf3" hidden>
+      <button id="openBank" type="button">OPEN SOUNDFONT</button>
+      <button id="closeBank" type="button" disabled>BUILT-IN SOUNDS</button>
+      <label class="bank-preset">VOICE <select id="bankPreset" aria-label="SoundFont voice" disabled><option>Built-in sounds</option></select></label>
+    </div>
+    <p class="midi-note">A loaded bank supplies the keyboard and imported MIDI songs. Built-in demonstration and rhythm sounds stay unchanged. Banks stay in this browser tab.</p>
+  </section>
   <div class="under-keyboard">
     <p class="play-hint"><strong>Just play.</strong> Use the keys above, or your computer keyboard: <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> <kbd>D</kbd> <kbd>C</kbd> … then <kbd>Q</kbd> <kbd>2</kbd> <kbd>W</kbd> <kbd>3</kbd> <kbd>E</kbd> …</p>
     <div class="mobile-key-nav" aria-label="Move along the on-screen keyboard">
