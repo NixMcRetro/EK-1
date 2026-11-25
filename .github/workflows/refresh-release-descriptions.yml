@@ -8,7 +8,8 @@ permissions:
   contents: read
 jobs:
   descriptions:
-    if: github.event.head_commit.message == 'docs: refresh EK-1 release descriptions'
+    if: >-
+      github.event.head_commit.message == 'docs: refresh EK-1 release descriptions'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -84,6 +85,5 @@ jobs:
             jq -S '{id,tag_name,target_commitish,name,draft,prerelease,published_at,assets:[.assets[]|{id,name,digest,size}]}' "before-$version.json" > before.json
             jq -S '{id,tag_name,target_commitish,name,draft,prerelease,published_at,assets:[.assets[]|{id,name,digest,size}]}' "after-$version.json" > after.json
             cmp before.json after.json
-            jq -er .body "after-$version.json" > actual.md
-            diff -u <(sed -e '$a\' "notes-$version.md") actual.md
+            test "$(jq -er .body "after-$version.json")" = "$(cat "notes-$version.md")"
           done
