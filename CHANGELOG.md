@@ -2,7 +2,20 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
-## [0.3.0] - Unreleased
+## [0.4.0] - Unreleased
+
+### Added
+- Optional user-supplied SF2/SF3 instrument banks through a locally bundled SpessaSynth AudioWorklet.
+- Voice selection, sampled live keyboard and imported MIDI playback with a separate play-along channel.
+- SoundFont bank and program numbers in MIDI recording export.
+- Generated synthetic SF2 fixture and real worklet browser test.
+
+### Limitations
+- No default or redistributed SoundFont included; requires a locally built and served application or HTTPS deployment.
+- Built-in demos, rhythm and accompaniment retain the original synthesizer. The MIDI scheduler still does not implement all controllers.
+- No automatic publishing to McRetro.
+
+## [0.3.0] - Verified development baseline
 
 ### Added
 - Local Standard MIDI File format 0 and 1 import with multichannel playback, tempo changes, sustain and program approximations.
