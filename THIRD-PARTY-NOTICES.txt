@@ -1,4 +1,4 @@
-EK-1 v0.9.6 — third-party software and sound bank notices
+EK-1 v0.9.7 — third-party software and sound bank notices
 
 Original EK-1 application: GPL-3.0-or-later (see LICENSE). Third-party works
 retain their own licences, permissions and disclaimers. No restriction on

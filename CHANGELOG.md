@@ -2,6 +2,13 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.7] - Demo audio headroom
+
+- Increase linear headroom before the emergency digital peak limiter; preserve the 25% startup volume and 0.35 maximum sample ceiling.
+- Rebalance demo lead and accompaniment, soften percussion attacks, and use a 2048-frame SoundFont buffer to reduce underrun risk.
+- Replace individual note-light timers with a shared audio-clock scheduler.
+- Dry sampled exports use downward-only linear gain rather than per-sample saturation.
+
 ## [0.9.6] - Middle C mapping and playback controls
 
 - Two-row F3-E5 computer keyboard mapping, with A3/B3/C4 on C/V/B and octave shifting.

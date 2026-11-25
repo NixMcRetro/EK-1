@@ -23,11 +23,17 @@
          synth.noteOn(n.channel,n.key,n.velocity);keys.set(id,n);
        }
        for(const pair of outputs)for(const buf of pair)buf.fill(0);core.process([],outputs);
-       for(let j=0;j<Math.min(128,length-pos);j++){left[pos+j]=wet?outputs[0][0][j]*EK1Levels.SAMPLE_GAIN:EK1Levels.limit(outputs[0][0][j]*EK1Levels.SAMPLE_GAIN)*volume;right[pos+j]=wet?outputs[0][1][j]*EK1Levels.SAMPLE_GAIN:EK1Levels.limit(outputs[0][1][j]*EK1Levels.SAMPLE_GAIN)*volume;}
+       for(let j=0;j<Math.min(128,length-pos);j++){left[pos+j]=outputs[0][0][j]*EK1Levels.SAMPLE_GAIN;right[pos+j]=outputs[0][1][j]*EK1Levels.SAMPLE_GAIN;}
        if(pos%32768===0){signal?.throwIfAborted();progress(.08+.82*pos/length);await yieldUI();}
      }
    }finally{core.destroy();}
-   if(!wet)return {left,right,rate};
+   if(!wet){
+     // Preserve the waveform for dry export: one downward-only gain for the
+     // complete stereo file, rather than sample-by-sample saturation.
+     let peak=0;for(let i=0;i<length;i++)peak=Math.max(peak,Math.abs(left[i]),Math.abs(right[i]));
+     const gain=volume*Math.min(.55,peak>0?EK1Levels.CEILING/peak:1);
+     for(let i=0;i<length;i++){left[i]*=gain;right[i]*=gain;}return {left,right,rate};
+   }
    signal?.throwIfAborted();
    const Offline=root.OfflineAudioContext||root.webkitOfflineAudioContext;
    if(!Offline)throw Error('Offline effects rendering is not supported.');

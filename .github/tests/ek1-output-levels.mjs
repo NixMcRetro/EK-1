@@ -15,6 +15,7 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   const buffer=await ctx.startRendering();return buffer.getChannelData(0).reduce((p,x)=>Math.max(p,Math.abs(x)),0);
  });
  assert(peak>0&&peak<=.3501,'output ceiling '+peak);
+ const linearity=await page.evaluate(()=>Math.max(...Array.from({length:601},(_,i)=>{const x=(i-300)/1000;return Math.abs(EK1Levels.limit(x)-x);})));assert(linearity<1e-7,'limiter linear region');
  // Headless Firefox/WebKit may have no real-time audio sink. Check their
  // rendered stereo samples and output-stage gain, not a silent analyser.
  const levels=await page.evaluate(async()=>{
@@ -38,6 +39,8 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
  }
  await page.locator('#tone').selectOption('0');await page.locator('.keyboard-scroll').focus();await page.keyboard.down('q');await measure('Classic');await page.keyboard.up('q');await page.locator('#stop').click();
  await page.locator('#tone').selectOption('fm-2');await page.locator('.keyboard-scroll').focus();await page.keyboard.down('q');await measure('FM');await page.keyboard.up('q');await page.locator('#stop').click();
+ await page.locator('#tone').selectOption('0');await page.locator('#playDemo').click();await measure('Classic demo');await page.locator('#stop').click();
+ await page.locator('#tone').selectOption('fm-2');await page.locator('#playDemo').click();await measure('FM lead demo');await page.locator('#stop').click();
  await page.locator('#bankFile').setInputFiles({name:'fixture.sf2',mimeType:'application/octet-stream',buffer:testSoundFont()});
  await page.waitForFunction(()=>EK1.state.soundfont&&!EK1.state.bankLoading);
  await page.locator('#tone').selectOption('sf-0');await page.locator('.keyboard-scroll').focus();await page.keyboard.down('q');await measure('SoundFont');await page.keyboard.up('q');await page.locator('#stop').click();

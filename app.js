@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v0.9.6. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.9.7. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.9.6';
+  const VERSION = '0.9.7';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -117,7 +117,8 @@
   let engine='classic', fmIndex=0, bankVoiceIndex=0, bankGeneration=0;
   const effects={reverb:0,chorus:0},favourites=new Map();
   const fmSettings={brightness:1,attack:1,release:1};
-  const held = new Map(), pending = new Set(), cancelled = new Set(), lights = new Map(), timers = new Set(), keyElements = new Map();
+  const held = new Map(), pending = new Set(), cancelled = new Set(), lights = new Map(), keyElements = new Map();
+  let lampLoop=null;const lampQueue=[];
   const noteToMidi = s => {
     const m = /^([A-G])([#b]?)(-?[0-9]+)$/.exec(s);
     if (!m) throw new Error('Invalid note: ' + s);
@@ -170,7 +171,7 @@
       const tone=song.sections?song.sections[Math.floor(n.step/64)%song.sections.length]:song.lead;
       add(0,n.midi,n.step,n.length*.91,tone,100);
     }
-    for(const [channel,level,pan] of [[0,105,64],[1,75,53],[2,90,64],[9,87,64]])controls.push({time:0,channel,control:7,value:level},{time:0,channel,control:10,value:pan});
+    for(const [channel,level,pan] of [[0,84,64],[1,62,53],[2,73,64],[9,70,64]])controls.push({time:0,channel,control:7,value:level},{time:0,channel,control:10,value:pan});
     notes.sort((a,b)=>a.time-b.time||a.channel-b.channel);
     return {notes,controls,channels:[0,1,2,9],duration:song.bars*4*beat};
   }
@@ -285,7 +286,7 @@
       o.type = 'sine';
       o.frequency.setValueAtTime(155, time);
       o.frequency.exponentialRampToValueAtTime(47, time + .13);
-      g.gain.setValueAtTime(strength * .75, time);
+      g.gain.setValueAtTime(.001,time);g.gain.linearRampToValueAtTime(strength*.75,time+.003);
       g.gain.exponentialRampToValueAtTime(.001, time + .23);
       o.connect(g).connect(bus); o.onended=()=>{o.disconnect();g.disconnect();}; o.start(time); o.stop(time + .25);
       return;
@@ -294,7 +295,7 @@
     src.buffer = noise;
     f.type = 'highpass';
     f.frequency.value = kind === 'snare' ? 1300 : 5200;
-    g.gain.setValueAtTime(strength * (kind === 'snare' ? .45 : .16), time);
+    g.gain.setValueAtTime(.001,time);g.gain.linearRampToValueAtTime(strength*(kind==='snare'?.45:.16),time+.002);
     g.gain.exponentialRampToValueAtTime(.001, time + (kind === 'snare' ? .16 : .045));
     src.connect(f).connect(g).connect(bus); src.onended=()=>{src.disconnect();f.disconnect();g.disconnect();};
     src.start(time); src.stop(time + (kind === 'snare' ? .18 : .06));
@@ -319,9 +320,9 @@
     }
     return root;
   }
-  function clockTimer(at,fn,register=false){
-    const id=setInterval(()=>{if(paused||!ctx||ctx.currentTime<at)return;clearInterval(id);if(register)timers.delete(id);fn();},12);
-    if(register)timers.add(id);return id;
+  function clockTimer(at,fn){
+    const id=setInterval(()=>{if(paused||!ctx||ctx.currentTime<at)return;clearInterval(id);fn();},25);
+    return id;
   }
   async function togglePause(){
     if(!transport||recording||bankLoading||pauseBusy||!ctx)return;
@@ -350,22 +351,37 @@
       node.dataset.channels=channels.map(c=>c+1).join(',');
     }else{node.style.removeProperty('--channel-fill');delete node.dataset.channels;}
   }
+  // A single visual scheduler for all keys, driven by the audio clock.
+  // No pair of repeating timers for every individual note.
   function lamp(midi,at,duration,channel=-1){
-    const node=keyElements.get(midi);if(!node||channel===9)return;
-    const on=clockTimer(at,()=>{
-      timers.delete(on);if(!node.isConnected)return;
-      let active=lights.get(midi);if(!active){active=new Map();lights.set(midi,active);}
-      active.set(channel,(active.get(channel)||0)+1);paintLamp(midi);
-      const off=clockTimer(at+Math.max(.03,duration),()=>{
-        timers.delete(off);const current=lights.get(midi);if(!current)return;
-        const remain=(current.get(channel)||1)-1;
-        if(remain>0)current.set(channel,remain);else current.delete(channel);
-        if(!current.size)lights.delete(midi);paintLamp(midi);
-      },true);
-    },true);
+    if(!keyElements.has(midi)||channel===9)return;
+    lampQueue.push({midi,channel,on:at,off:at+Math.max(.03,duration),started:false});
+    if(lampLoop===null)lampLoop=setInterval(updateLamps,30);
+  }
+  function updateLamps(){
+    if(paused||!ctx)return;
+    const now=ctx.currentTime,changed=new Set();
+    for(let i=lampQueue.length-1;i>=0;i--){
+      const n=lampQueue[i];
+      if(now>=n.off){
+        if(n.started){const active=lights.get(n.midi);if(active){
+          const remain=(active.get(n.channel)||1)-1;
+          if(remain>0)active.set(n.channel,remain);else active.delete(n.channel);
+          if(!active.size)lights.delete(n.midi);
+        }changed.add(n.midi);}
+        lampQueue[i]=lampQueue[lampQueue.length-1];lampQueue.pop();continue;
+      }
+      if(!n.started&&now>=n.on){
+        n.started=true;let active=lights.get(n.midi);
+        if(!active){active=new Map();lights.set(n.midi,active);}
+        active.set(n.channel,(active.get(n.channel)||0)+1);changed.add(n.midi);
+      }
+    }
+    for(const midi of changed)paintLamp(midi);
+    if(!lampQueue.length){clearInterval(lampLoop);lampLoop=null;}
   }
   function clearLamps(){
-    timers.forEach(clearInterval);timers.clear();lights.clear();
+    if(lampLoop!==null)clearInterval(lampLoop);lampLoop=null;lampQueue.length=0;lights.clear();
     keyElements.forEach((node,midi)=>paintLamp(midi));
   }
   function renderMidiLegend(song){
@@ -405,7 +421,7 @@
     reflectButtons();
     if (announce) show('EK-1 READY', voiceLabel());
   }
-  function demoLeadSound(midi,at,duration,tr,originalTone,velocity=.43){
+  function demoLeadSound(midi,at,duration,tr,originalTone,velocity=.28){
     if(followDemoVoice&&engine==='fm')return EK1FM.voice(ctx,tr.bus,midi,at,duration,fmIndex,fmSettings,velocity*EK1Levels.FM_GAIN);
     return voice(midi,at,duration,followDemoVoice&&engine==='classic'?tone:originalTone,velocity,tr.bus);
   }
@@ -464,10 +480,11 @@
     const song=SONGS[index];
     if(bank){
       transport=makeMidiTransport('demo',demoArrangement(index),bank,createBus());
-      transport.demoIndex=index;transport.demoBar=1;transport.localLead=[];
+      transport.demoIndex=index;transport.demoBar=1;transport.localLead=[];transport.bus.gain.value=.70;
       loop=setInterval(midiTick,25);reflectButtons();demoDisplay(transport,1);midiTick();
     }else{
       transport={type:'demo',song:index,step:0,nextTime:ctx.currentTime+.08,bpm:song.tempo,bus:createBus()};
+      transport.bus.gain.value=.70;
       loop=setInterval(tick,25);reflectButtons();demoDisplay(transport,1);tick();
     }
   }
@@ -610,7 +627,7 @@
         const end=tr.start+n.time+n.duration;
         if(end<=now||(tr.type==='demo'&&melodyOff&&n.channel===0))continue;
         if(tr.type==='demo'&&n.channel===0&&followDemoVoice&&engine!=='soundfont'){
-          const sound=demoLeadSound(n.key,now,end-now,tr,EK1MIDI.toneFor(n.program),.38);tr.localLead.push({sound,end:end+.7});
+          const sound=demoLeadSound(n.key,now,end-now,tr,EK1MIDI.toneFor(n.program),.25);tr.localLead.push({sound,end:end+.7});
         }else tr.sampleBank.songOn(n,tr.type==='demo'&&n.channel===0&&followDemoVoice&&engine==='soundfont'?bank.selected:null);
         if(tr.type!=='demo'||n.channel===0)lamp(n.key,now,end-now,tr.type==='midi'?n.channel:-1);
       }

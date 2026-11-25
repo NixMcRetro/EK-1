@@ -6,7 +6,9 @@
 (function(root){
   'use strict';
   function makeNode(context, name, options){
-    const node=context.createScriptProcessor(1024,0,2);
+    // More processing time per callback on the legacy direct-file bridge.
+    // 2048 frames trades roughly 21 ms at 48 kHz for better underrun tolerance.
+    const node=context.createScriptProcessor(2048,0,2);
     const channel=new MessageChannel();
     const core=new root.EK1LocalProcessor(options.processorOptions,channel.port2);
     const outputs=Array.from({length:18},()=>[new Float32Array(128),new Float32Array(128)]);

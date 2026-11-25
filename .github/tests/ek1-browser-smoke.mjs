@@ -1,4 +1,4 @@
-// Electronic Keyboard (Model EK-1) v0.9.6 browser regression.
+// Electronic Keyboard (Model EK-1) v0.9.7 browser regression.
 // Run with: node .github/tests/ek1-browser-smoke.mjs
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
@@ -10,7 +10,7 @@ import {chromium, firefox, webkit} from 'playwright';
 const url = pathToFileURL(resolve('index.html')).href;
 mkdirSync('artifacts', {recursive:true});
 for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
-  const browser = await browserType.launch({headless:true});
+  const browser = await browserType.launch({headless:true,...(name==='firefox'?{firefoxUserPrefs:{'media.autoplay.default':0,'media.autoplay.blocking_policy':0}}:{})});
   try {
     for (const width of (name === 'chromium' ? [1280, 390] : [1024])) {
       const page = await browser.newPage({viewport:{width, height:860}});
@@ -18,7 +18,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(url, {waitUntil:'load'});
       await page.waitForFunction(() => !!window.EK1);
-      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.9\.6/);
+      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.9\.7/);
       const info = await page.evaluate(() => ({
         version: EK1.version,
         tones: EK1.tones,
@@ -27,7 +27,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         bars: Array.from({length:EK1.demos}, (_,i) => EK1.demoBars(i)),
         events: Array.from({length:EK1.demos}, (_,i) => EK1.demoEvents(i))
       }));
-      assert.equal(info.version, '0.9.6');
+      assert.equal(info.version, '0.9.7');
       assert.deepEqual([info.tones,info.rhythms,info.demos], [12,6,5]);
       assert.deepEqual(info.bars, [16,16,16,16,16]);
       for (const [i,events] of info.events.entries()) {
@@ -85,7 +85,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         assert(clippedKeys <= 2, 'All 49 keys should fit a wide desktop screen');
       }
       // Capture desktop/mobile appearances for human review of the physical design.
-      await page.screenshot({path: 'artifacts/ek1-v0.9.6-' + name + '-' + width + '.png', fullPage:true});
+      await page.screenshot({path: 'artifacts/ek1-v0.9.7-' + name + '-' + width + '.png', fullPage:true});
       await page.locator('#tone').selectOption('5');
       assert.match(await page.locator('#displayMain').textContent(),/TRUMPET/);
       await page.locator('#playDemo').click();
@@ -138,9 +138,13 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       assert.match(await page.locator('#midiStatus').innerText(),/2 notes/);
       await page.locator('#playMidi').click();
       await page.waitForFunction(()=>EK1.state.transport==='midi');
-      await page.waitForFunction(()=>document.querySelector('[data-midi="60"]').dataset.channels?.split(',').length===2);
       assert.equal(await page.locator('#midiLegend .channel-swatch').count(),2);
-      await page.waitForFunction(()=>document.querySelector('[data-midi="60"]').dataset.channels?.split(',').length===1);
+      // Some headless browser runs have no advancing real-time audio clock.
+      const clock=await page.evaluate(()=>EK1.state.audioTime);await page.waitForTimeout(250);
+      if(await page.evaluate(t=>EK1.state.audioTime>t+.05,clock)){
+        await page.waitForFunction(()=>document.querySelector('[data-midi="60"]').dataset.channels?.split(',').length===2);
+        await page.waitForFunction(()=>document.querySelector('[data-midi="60"]').dataset.channels?.split(',').length===1);
+      }else{assert.notEqual(name,'chromium','Chromium must measure live MIDI lights');console.log('No live audio clock in '+name+'; MIDI legend checked, overlap verified in Chromium');}
       await page.keyboard.down('q');
       await page.waitForFunction(()=>document.querySelector('[data-midi="65"]').classList.contains('pressed'));
       await page.keyboard.up('q');

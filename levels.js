@@ -2,13 +2,16 @@
 /* Shared conservative output stage. A digital ceiling is not an SPL guarantee. */
 (function(root){'use strict';
  const DEFAULT_VOLUME=.25, CEILING=.35, SAMPLE_GAIN=.5, FM_GAIN=.75;
- const limit=x=>{if(!Number.isFinite(x))return 0;const sign=Math.sign(x),v=Math.abs(x),k=.16;return sign*(v<=k?v:Math.min(CEILING,k+(CEILING-k)*Math.tanh((v-k)/(CEILING-k))));};
+ const limit=x=>{if(!Number.isFinite(x))return 0;const sign=Math.sign(x),v=Math.abs(x),k=.30;return sign*(v<=k?v:Math.min(CEILING,k+(CEILING-k)*Math.tanh((v-k)/(CEILING-k))));};
  const curve=Float32Array.from({length:4097},(_,i)=>limit(i/2048-1));
  function create(context,destination,volume=DEFAULT_VOLUME,effects={}){
-   const input=context.createGain(),compressor=context.createDynamicsCompressor(),limiter=context.createWaveShaper(),output=context.createGain();
-   compressor.threshold.value=-24;compressor.knee.value=12;compressor.ratio.value=6;compressor.attack.value=.003;compressor.release.value=.15;
+   const input=context.createGain(),compressor=context.createDynamicsCompressor(),limiter=context.createWaveShaper(),headroom=context.createGain(),output=context.createGain();
+   compressor.threshold.value=-20;compressor.knee.value=12;compressor.ratio.value=4;compressor.attack.value=.005;compressor.release.value=.18;
+   // Linear attenuation before the emergency shaper; ordinary musical peaks
+   // stay in its linear region instead of being continually saturated.
+   headroom.gain.value=.55;
    limiter.curve=curve;output.gain.value=Math.max(0,Math.min(1,volume));
-   input.connect(compressor).connect(limiter).connect(output).connect(destination);
+   input.connect(compressor).connect(headroom).connect(limiter).connect(output).connect(destination);
    // Small deterministic room impulse and modulated delay. No feedback, no
    // external samples, and both wet paths pass through the existing ceiling.
    const reverb=context.createConvolver(),room=context.createGain(),chorus=context.createGain();

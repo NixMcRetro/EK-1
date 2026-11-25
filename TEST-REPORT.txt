@@ -23,3 +23,5 @@ LICENCE: original EK-1 application GPL-3.0-or-later; no deployment made.
 0.9.5 candidate: new tests cover note rails, collapsed panels, octave mapping and simultaneous MIDI channel highlights.
 
 0.9.6 candidate: see CI for mapping, demo voice and pause/resume checks.
+
+0.9.7: see CI for nominal-signal linearity and demo playback regressions. Actual Safari headphone distortion remains unverified.
