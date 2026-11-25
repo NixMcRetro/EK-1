@@ -51,8 +51,38 @@
  $('composeFeel').addEventListener('change',()=>{changed();report('Feel updated for the next playback or export.');});
  $('composeStyle').addEventListener('change',()=>{$('composeTempo').value=C.styles[$('composeStyle').value].bpm;});
  $('composeGenerate').addEventListener('click',()=>{if(dirty&&!confirm('Replace your unsaved arrangement? Save a project first to keep it.'))return;EK1.stopComposition();song=C.create(Number($('composeKey').value),$('composeProgress').value,Number($('composeBars').value),$('composeStyle').value,$('composeFeel').value);song.bars[0].section='Verse';variation=0;dirty=false;rebuild();report('New arrangement ready. Edit chords or melody, or press PLAY SONG.');});
- $('composeMelody').addEventListener('click',()=>{try{settings();}catch(e){report(e.message);return;}C.melodyFor(song.bars,++variation,song.style,song.key,song.feel).forEach((m,i)=>{const size=Math.max(song.bars[i].melody.length,m.length);const next=Array(size).fill(null);m.forEach((note,j)=>{const at=j*size/m.length;next[at]=note;if(note===-1||(note!==null&&m[j+1]===-1))for(let k=1;k<size/m.length;k++)next[at+k]=-1;});song.bars[i].melody=cleanMelody(next);});changed();rebuild();report('New melody ready.');});
- $('composePlay').addEventListener('click',async()=>{try{if(EK1.state.composing){EK1.stopComposition();return;}settings();const bytes=C.encode(song);await EK1.playComposition(bytes);report('Playing your song. Play along on the keyboard.');}catch(e){report(e.message);}});
+ function regenerateMelody(){
+   C.melodyFor(song.bars,++variation,song.style,song.key,song.feel).forEach((m,i)=>{
+     const size=Math.max(song.bars[i].melody.length,m.length),next=Array(size).fill(null);
+     m.forEach((note,j)=>{const at=j*size/m.length;next[at]=note;if(note===-1||(note!==null&&m[j+1]===-1))for(let k=1;k<size/m.length;k++)next[at+k]=-1;});
+     song.bars[i].melody=cleanMelody(next);
+   });
+   changed();rebuild();
+ }
+ $('composeMelody').addEventListener('click',()=>{try{settings();regenerateMelody();report('New melody ready; chords unchanged.');}catch(e){report(e.message);}});
+ $('composeHarmony').addEventListener('click',()=>{
+   try{
+     settings();
+     if(!confirm('Replace the chords and melody? Your sections, tempo and instruments will be kept.'))return;
+     const patterns=Object.keys(C.progressions),current=patterns.indexOf($('composeProgress').value);
+     for(let offset=1;offset<=patterns.length;offset++){
+       const pattern=patterns[(current+offset)%patterns.length], source=C.create(song.key,pattern,4,song.style,song.feel).bars;
+       let first=0;const chords=song.bars.map((bar,i)=>{if(bar.section)first=i;return {...source[(i-first)%4].chord};});
+       if(chords.every((c,i)=>C.chordName(c)===C.chordName(song.bars[i].chord)))continue;
+       song.bars.forEach((bar,i)=>bar.chord=chords[i]);$('composeProgress').value=pattern;regenerateMelody();report('New chords and melody ready: '+pattern+'.');return;
+     }
+   }catch(e){report(e.message);}
+ });
+ // This is navigation, not browser zoom. Keep the option session-local.
+ function returnToKeyboard(){
+   if(!$('composeReturn').checked)return;
+   const instrument=document.querySelector('.instrument'),keys=document.querySelector('.keyboard-scroll');
+   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+   const target=instrument.getBoundingClientRect().height>window.innerHeight?keys:instrument;
+   target.scrollIntoView({block:target===keys?'center':'start',behavior:reduced?'auto':'smooth'});
+   keys.focus({preventScroll:true});
+ }
+ $('composePlay').addEventListener('click',async()=>{try{if(EK1.state.composing){EK1.stopComposition();return;}settings();const bytes=C.encode(song);await EK1.playComposition(bytes);report('Playing your song. Play along on the keyboard.');if(EK1.state.composing)returnToKeyboard();}catch(e){report(e.message);}});
  $('composeSave').addEventListener('click',()=>{try{settings();EK1.downloadComposition(C.encode(song));report('Song exported as multitrack MIDI.');}catch(e){report(e.message);}});
  // Strict validation prevents malformed project files from replacing a working song.
  function validateProject(p){

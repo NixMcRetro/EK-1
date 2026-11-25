@@ -15,3 +15,5 @@ LICENCE: original EK-1 application GPL-3.0-or-later; no deployment made.
 0.9.1 candidate: see current GitHub Actions for new sampled-demo and STOP regression results. Earlier results above refer to 0.9.0.
 
 0.9.2 candidate: see current GitHub Actions for deterministic groove, backwards-compatible project and playback/export checks.
+
+0.9.3: see current CI for output ceiling and Song Builder navigation tests. Digital peak limits do not measure headphone sound pressure levels.

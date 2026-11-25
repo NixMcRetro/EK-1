@@ -33,14 +33,16 @@ jobs:
         run: node .github/tests/ek1-fm-audio.mjs
       - name: Direct-file SoundFont regression
         run: node .github/tests/ek1-soundfont-browser.mjs
+      - name: Output ceiling and level regression
+        run: node .github/tests/ek1-output-levels.mjs
       - name: Composition, project and audio export
         run: node .github/tests/ek1-composition-browser.mjs
       - name: Package exactly the tested source
-        run: git archive --format=zip --prefix=EK-1-v0.9.2/ --output=EK-1-v0.9.2-offline.zip HEAD
+        run: git archive --format=zip --prefix=EK-1-v0.9.3/ --output=EK-1-v0.9.3-offline.zip HEAD
       - uses: actions/upload-artifact@v4
         with:
-          name: EK-1-v0.9.2-offline
-          path: EK-1-v0.9.2-offline.zip
+          name: EK-1-v0.9.3-offline
+          path: EK-1-v0.9.3-offline.zip
           retention-days: 30
       - uses: actions/upload-artifact@v4
         if: always()

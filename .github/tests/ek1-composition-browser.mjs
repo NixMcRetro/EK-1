@@ -47,8 +47,16 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   await page.locator('#projectFile').setInputFiles({name:'older.ek1',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(old))});
   await page.waitForFunction(()=>document.querySelector('#composeFeel').value==='Original');
   await page.locator('#composeFeel').selectOption('Natural');
+  const chords=()=>page.locator('#composeRows tr td:first-of-type select:first-child').evaluateAll(els=>els.map(el=>el.value));
+  const before=await chords();await page.locator('#composeMelody').click();assert.deepEqual(await chords(),before);
+  await page.locator('#composeHarmony').click();assert.notDeepEqual(await chords(),before);
+  assert(await page.locator('#composeReturn').isChecked());
   await page.locator('#composePlay').click();
   await page.waitForFunction(()=>EK1.state.composing);
+  await page.waitForFunction(()=>document.activeElement===document.querySelector('.keyboard-scroll'));
+  await page.locator('#stop').click();
+  await page.locator('#composeReturn').uncheck();await page.locator('#composePlay').click();
+  await page.waitForFunction(()=>EK1.state.composing);assert(await page.locator('#composePlay').evaluate(el=>document.activeElement===el)||!(await page.locator('.keyboard-scroll').evaluate(el=>document.activeElement===el)));
   await page.locator('#stop').click();
   await page.waitForFunction(()=>EK1.state.transport==='stopped');
   await page.locator('#audioRate').selectOption('48000');

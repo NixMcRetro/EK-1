@@ -2,6 +2,13 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.3] - Output level protection and Song Builder navigation
+
+- Lower 25% startup volume, visible percentage, conservative engine trims, shared compressor and bounded output stage.
+- Sampled and Classic audio exports use conservative peak protection without upward normalisation.
+- Separate chord-and-melody regeneration without replacing the rest of the project.
+- Optional automatic return to the keyboard on playback (enabled by default).
+
 ## [0.9.2] - Musical refinement
 
 - Natural and Expressive feels with deterministic timing and velocity variation, style-specific swing, recurring motifs, chord inversions, bass transitions and phrase fills.

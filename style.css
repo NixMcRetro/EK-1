@@ -430,3 +430,5 @@ footer {
 
 /* Release candidate: usable section labels, visible focus and mobile octave navigation. */
 .compose-table th:first-child{width:68px}.section-bar{overflow-wrap:anywhere}.compose-table select{max-width:100%}.instrument .mobile-key-nav{color:#f1f1e8;padding:6px 10px}.instrument .mobile-key-nav button{color:#222}.song-builder #cancelExport[hidden]{display:none!important}.song-builder #cancelExport{margin-top:8px}.compose-tools a:focus-visible,footer a:focus-visible{outline:2px solid currentColor;outline-offset:3px}@media(max-width:760px){.compose-table th:first-child{width:54px}.compose-table{min-width:420px}}
+
+.compose-scroll{display:flex;align-items:center;gap:7px;margin:9px 0;font-size:12px;font-weight:700}.compose-scroll input{accent-color:#536853}

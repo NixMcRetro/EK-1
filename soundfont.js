@@ -35,7 +35,8 @@
       await waitFor(()=>synth.midiChannels.length>=17,'Could not create a play-along channel.');
       const live=16, counts=new Map(), songKeys=new Map(), patches=new Map();
       let selected=presets[0], disposed=false;
-      synth.connect(destination);
+      const trim=context.createGain();trim.gain.value=EK1Levels.SAMPLE_GAIN;
+      synth.connect(trim);trim.connect(destination);
       function select(p){
         synth.controllerChange(live,120,0);for(let k=0;k<128;k++)counts.delete(live*128+k);selected=p;
         synth.controllerChange(live,0,p.bankMSB);synth.controllerChange(live,32,p.bankLSB);synth.programChange(live,p.program);
@@ -96,7 +97,7 @@
         get songKeys(){return songKeys.size;},
         stopSong,stopSongChannel,stopLive,
         songChannelKeys(c){let n=0;for(const note of songKeys.values())if(note.channel===c)n++;return n;},
-        destroy(){if(!disposed){disposed=true;synth.stopAll(true);synth.destroy();counts.clear();}}
+        destroy(){if(!disposed){disposed=true;synth.stopAll(true);synth.destroy();trim.disconnect();counts.clear();}}
       };
     }catch(e){if(synth)synth.destroy();throw e;}
   }
