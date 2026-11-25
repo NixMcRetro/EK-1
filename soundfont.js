@@ -1,7 +1,7 @@
 /* Local, optional SoundFont adapter. Library and worklet are bundled at build time. */
 (function(root){
   'use strict';
-  const MAX_BYTES=128*1024*1024;
+  const MAX_BYTES=512*1024*1024;
   const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   async function waitFor(predicate,message){
     for(let i=0;i<300;i++){if(predicate())return;await pause(20);}
@@ -13,7 +13,7 @@
     finally{clearTimeout(timer);}
   }
   function validate(buffer){
-    if(buffer.byteLength<12||buffer.byteLength>MAX_BYTES)throw Error('SoundFont must be between 12 bytes and 128 MB.');
+    if(buffer.byteLength<12||buffer.byteLength>MAX_BYTES)throw Error('SoundFont must be between 12 bytes and 512 MiB.');
     const b=new Uint8Array(buffer,0,12), text=(a,n)=>String.fromCharCode(...b.subarray(a,a+n));
     if(text(0,4)!=='RIFF'||text(8,4)!=='sfbk')throw Error('Choose a valid SF2 or SF3 SoundFont.');
     if(new DataView(buffer).getUint32(4,true)+8!==buffer.byteLength)throw Error('Incomplete SoundFont file.');
@@ -32,8 +32,8 @@
     let synth;
     try{
       synth=new WorkletSynthesizer(context);
-      await deadline(synth.soundBankManager.addSoundBank(buffer,'ek1'),'SoundFont loading timed out.');
-      await deadline(synth.isReady,'SoundFont engine did not start.');
+      await deadline(synth.soundBankManager.addSoundBank(buffer,'ek1'),'SoundFont loading timed out. Try a smaller bank or the local-server package.',120000);
+      await deadline(synth.isReady,'SoundFont engine did not start.',60000);
       await waitFor(()=>synth.presetList.length>0,'SoundFont has no presets.');
       const presets=synth.presetList.filter(p=>!p.isDrum).map(p=>({name:p.name,program:p.program,bankMSB:p.bankMSB,bankLSB:p.bankLSB}));
       if(!presets.length)throw Error('SoundFont has no melodic presets.');
