@@ -432,3 +432,14 @@ footer {
 .compose-table th:first-child{width:68px}.section-bar{overflow-wrap:anywhere}.compose-table select{max-width:100%}.instrument .mobile-key-nav{color:#f1f1e8;padding:6px 10px}.instrument .mobile-key-nav button{color:#222}.song-builder #cancelExport[hidden]{display:none!important}.song-builder #cancelExport{margin-top:8px}.compose-tools a:focus-visible,footer a:focus-visible{outline:2px solid currentColor;outline-offset:3px}@media(max-width:760px){.compose-table th:first-child{width:54px}.compose-table{min-width:420px}}
 
 .compose-scroll{display:flex;align-items:center;gap:7px;margin:9px 0;font-size:12px;font-weight:700}.compose-scroll input{accent-color:#536853}
+
+/* Compact arrangement navigation; the keyboard faceplate stays unchanged. */
+.compose-overview{border-top:1px solid #b4b9ae;padding:8px 0}
+.compose-overview-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800;font-size:10px;letter-spacing:.04em}
+#composeLengthReadout{font-weight:400;color:#535d54;margin-left:5px;letter-spacing:0}
+#composeSections{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.song-builder .section-chip{font-size:11px;min-height:32px;padding:5px 9px;max-width:100%;overflow-wrap:anywhere}
+.song-builder .section-chip[aria-pressed=true]{background:#536853;color:#fff;border-color:#364537}
+.compose-editor>summary{font-size:12px;font-weight:700;cursor:pointer;padding:5px 0;color:#374437}
+.compose-editor>summary:focus-visible{outline:2px solid #384e36;outline-offset:2px}
+@media(max-width:760px){.song-builder .section-chip{min-height:44px}.compose-overview-heading{flex-wrap:wrap}}
