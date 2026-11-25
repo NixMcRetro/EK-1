@@ -10,6 +10,7 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
  const page=await browser.newPage();await page.goto(pathToFileURL(resolve('index.html')).href);
  assert.equal(await page.locator('#volume').inputValue(),'50');
  assert.equal(await page.evaluate(()=>EK1Levels.DEFAULT_VOLUME),.5);
+ assert.equal(await page.evaluate(()=>EK1Levels.FM_GAIN),.4);
  assert.equal(await page.locator('#volumeValue').innerText(),'50%');
  const peak=await page.evaluate(async()=>{
   const ctx=new OfflineAudioContext(2,48000,48000),stage=EK1Levels.create(ctx,ctx.destination,1);
@@ -31,6 +32,22 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
  });
  assert(levels[0]>0&&levels[0]<=.1751,'default ceiling');assert.equal(levels[1],0,'offline mute');
  if(name!=='chromium'){console.log('PASS',name,'offline output ceiling, startup gain, mute; live transport covered by smoke tests',levels);continue;}
+ // Compare the same FM notes with old and new gain, before the nonlinear output stage.
+ const ratios=await page.evaluate(async()=>{
+  const out=[];
+  for(let i=0;i<EK1FM.presets.length;i++){
+   const energy=[];
+   for(const trim of [.75,EK1Levels.FM_GAIN]){
+    const c=new OfflineAudioContext(1,48000,48000);
+    EK1FM.voice(c,c.destination,65,0,.8,i,{},.38*trim);
+    const data=(await c.startRendering()).getChannelData(0);
+    energy.push(Math.sqrt(data.reduce((sum,n)=>sum+n*n,0)/data.length));
+   }
+   out.push(energy[1]/energy[0]);
+  }return out;
+ });
+ assert(ratios.every(r=>r>.52&&r<.55),'FM RMS trim ratios '+ratios);
+ console.log('FM RMS ratios vs previous trim',ratios);
  // Chromium provides a measurable real-time output in CI.
  await page.locator('#volume').evaluate(el=>{el.value='100';el.dispatchEvent(new Event('input',{bubbles:true}));});
  const peaks=[];

@@ -1,15 +1,11 @@
-# EK-1 v1.0.0
+# EK-1 v1.0.1
 
-The first stable release of Electronic Keyboard (Model EK-1), a free, open-source home keyboard for your browser.
+- SoundFont output trim restored to unity.
+- Improved demo and auto-accompaniment balance.
+- Independent BACKING VOLUME, starting at 80%.
+- Automatic bar-aligned demo looping without an intentional restart gap, with an option to play once.
+- Reduce FM lead gain to 40% to better balance accompaniment.
+- Sampled accompaniment when a SoundFont is loaded; built-in drums if no percussion bank is present.
+- Master volume remains 50%; existing peak protection is unchanged.
 
-- 🎹 49 keys, 20 built-in voices, rhythms, chords, five original demos, and recording.
-- 🎛️ Optional local SF2/SF3 SoundFonts, FM shaping, reverb, chorus, and favourites.
-- 🎶 Multichannel MIDI playback, looping, pause/resume, voice overrides, and coloured key lights.
-- ✏️ Four-part Song Builder, editable melodies and chords, sections, mixer, undo/redo, and editable projects.
-- 💾 MIDI, WAV, and MP3 exports; light/dark/system appearance and remembered panel layout.
-
-**Download the offline ZIP, extract it, and open index.html.** No installation or server required. No SoundFont is bundled; FluidR3 GM is an optional separate download.
-
-Main volume starts at 50%. The existing digital peak ceiling remains in place; start with low device/headphone volume.
-
-Licensed under GPL-3.0-or-later, with separate third-party licences preserved. See README.md and CHANGELOG.md for details and limitations.
+Extract the complete offline ZIP and open index.html. No bundled SoundFonts or new dependencies. GPL-3.0-or-later; third-party notices retained.

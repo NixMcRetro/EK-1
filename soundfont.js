@@ -75,7 +75,7 @@
         songKeys.clear();patches.clear();for(let k of counts.keys())if(k<16*128)counts.delete(k);
       }
       return {
-        presets,get selected(){return selected;},get voices(){return synth.voiceCount;},
+        presets,hasDrums:synth.presetList.some(p=>p.isDrum),get selected(){return selected;},get voices(){return synth.voiceCount;},
         select,
         liveOn(key,velocity){on(live,key,velocity);let released=false;return {release(){if(!released){released=true;off(live,key);}}};},
         songOn(n,override=null){

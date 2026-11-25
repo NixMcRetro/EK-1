@@ -540,3 +540,5 @@ footer{border-top:1px solid #a5aaa0;padding:12px 0 16px;font-size:12px;line-heig
 :root[data-theme="dark"] :is(.midi-strip,.song-builder,.under-keyboard,footer) a:visited{color:#c5b5df}
 :root[data-theme="dark"] kbd{background:var(--page-control);color:var(--page-ink);border-color:var(--page-border)}
 @media(max-width:760px){.appearance-bar select{min-height:36px}}
+
+.backing-setting{flex:1 1 100%;min-height:0;gap:2px;margin-top:2px}.backing-setting input{margin:0}.backing-setting .setting-title{font-size:9px}

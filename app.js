@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v1.0.0. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v1.0.1. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '1.0.0';
+  const VERSION = '1.0.1';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -108,9 +108,11 @@
       ]
     }
   ];
-  let ctx, master, outputStage, outputMeter, noise, transport = null, loop = null, endTimer = null, transportGeneration = 0;
+  let ctx, master, backingPreview, outputStage, outputMeter, noise, transport = null, loop = null, endTimer = null, transportGeneration = 0;
   let paused=false,pauseBusy=false,pauseDisplay=null,followDemoVoice=true,midiOverride='original';
   let tone = 0, rhythm = 0, tempo = 116, volume = EK1Levels.DEFAULT_VOLUME, melodyOff = false, autoChord = false;
+  let backingVolume=.8;
+  const backingLevels={1:115,2:120,3:115,9:110};
   let heldChord = null, recording = false, take = [], takeStart = 0, recordTimer = null;
   let importedMidi = null, midiName = '', importRequest = 0;
   let bank = null, bankLoading = false, bankFileRef = null;
@@ -164,21 +166,21 @@
       if(step%4===0)add(2,chord.root-(pos===8?17:24),step,.52,10,87);
       if((upbeat&&[2,6,10,14].includes(pos))||(!upbeat&&pos===0)){
         const tone=upbeat?(song.rhythm===3?2:3):(song.rhythm===2?4:1);
-        for(const key of chord.notes)add(1,key,step,upbeat?.3:.64,tone,upbeat?66:55);
+        for(const key of chord.notes)add(1,key,step,upbeat?.3:.64,tone,upbeat?80:72);
       }
     }
     for(const n of song.events){
       const tone=song.sections?song.sections[Math.floor(n.step/64)%song.sections.length]:song.lead;
       add(0,n.midi,n.step,n.length*.91,tone,100);
     }
-    for(const [channel,level,pan] of [[0,84,64],[1,62,53],[2,73,64],[9,70,64]])controls.push({time:0,channel,control:7,value:level},{time:0,channel,control:10,value:pan});
+    for(const [channel,level,pan] of [[0,100,64],[1,115,53],[2,120,64],[9,110,64]])controls.push({time:0,channel,control:7,value:level},{time:0,channel,control:10,value:pan});
     notes.sort((a,b)=>a.time-b.time||a.channel-b.channel);
     return {notes,controls,channels:[0,1,2,9],duration:song.bars*4*beat};
   }
   function demoIndex(tr=transport){return tr?.type==='demo'?(tr.demoIndex??tr.song):null;}
   function demoDisplay(tr,bar){
     const index=demoIndex(tr),song=SONGS[index];
-    show(String(index+1).padStart(2,'0')+' '+song.title.toUpperCase(),'DEMO - '+(tr.sampleBank?'SF':'CLASSIC')+' - BAR '+bar+'/'+song.bars+(melodyOff?' - MELODY OFF':''));
+    show(String(index+1).padStart(2,'0')+' '+song.title.toUpperCase(),'DEMO - '+(tr.sampleBank?'SF':'CLASSIC')+' - BAR '+bar+'/'+song.bars+(melodyOff?' - MELODY OFF':'')+(tr.repeatCount?' - LOOP '+(tr.repeatCount+1):''));
   }
   async function audio() {
     if (!ctx) {
@@ -188,6 +190,7 @@
       outputMeter=ctx.createAnalyser();outputMeter.fftSize=2048;outputMeter.connect(ctx.destination);
       outputStage=EK1Levels.create(ctx,outputMeter,volume,effects);
       master=outputStage.input;
+      backingPreview=ctx.createGain();backingPreview.gain.value=backingVolume*1.25;backingPreview.connect(master);
       noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const data = noise.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -314,9 +317,9 @@
     const { notes, root } = chord;
     const upbeat = style === 3 || style === 4;
     if (upbeat) {
-      notes.forEach(n => voice(n, at, beatDuration * .3, style === 3 ? 2 : 3, .09, bus));
+      notes.forEach(n => voice(n, at, beatDuration * .3, style === 3 ? 2 : 3, .12, bus));
     } else {
-      notes.forEach(n => voice(n, at, beatDuration * .64, style === 2 ? 4 : 1, .055, bus));
+      notes.forEach(n => voice(n, at, beatDuration * .64, style === 2 ? 4 : 1, .085, bus));
     }
     return root;
   }
@@ -402,6 +405,47 @@
       item.append(swatch,desc);legend.append(item);
     }
   }
+  function backingBus(tr){
+    const gain=ctx.createGain();gain.gain.value=backingVolume*1.25;gain.connect(tr.bus);tr.backingBus=gain;return gain;
+  }
+  function scaledBacking(channel,level=backingLevels[channel]){
+    return Math.round(Math.max(0,Math.min(127,level*backingVolume)));
+  }
+  function updateBacking(){
+    if(ctx){
+      backingPreview?.gain.setTargetAtTime(backingVolume*1.25,ctx.currentTime,.02);
+      transport?.backingBus?.gain.setTargetAtTime(backingVolume*1.25,ctx.currentTime,.02);
+    }
+    if(bank){
+      if(transport?.type==='demo'||transport?.type==='rhythm'){
+        for(const c of [1,2,9])bank.songControl({channel:c,control:7,value:scaledBacking(c)});
+      }
+      if(autoChord&&transport?.type!=='demo'&&transport?.type!=='midi'&&transport?.type!=='take')
+        bank.songControl({channel:3,control:7,value:scaledBacking(3)});
+    }
+  }
+  function sampleNote(channel,key,program,velocity){
+    return {channel,key,program,velocity,bankMSB:0,bankLSB:0};
+  }
+  function sampleBeat(tr,channel,key,program,velocity,duration){
+    const n=sampleNote(channel,key,program,velocity);
+    tr.sampleBank.songOn(n);tr.sampleOff.push({note:n,at:ctx.currentTime+duration});
+  }
+  function sampledRhythmStep(tr,step,beat){
+    const p=RHYTHMS[tr.rhythm],pos=step%16,at=ctx.currentTime;
+    if(tr.sampleBank.hasDrums){
+      if(p.kick[pos]==='1')sampleBeat(tr,9,36,0,100,beat*.20);
+      if(p.snare[pos]==='1')sampleBeat(tr,9,38,0,88,beat*.18);
+      if(p.hat[pos]==='1')sampleBeat(tr,9,42,0,pos%4===2?78:53,beat*.11);
+    }else drumsForStep(step,at,tr.rhythm,tr.backingBus);
+    if(!autoChord||!heldChord)return;
+    const chord=chordInfo(heldChord),upbeat=tr.rhythm===3||tr.rhythm===4;
+    if(step%4===0)sampleBeat(tr,2,chord.root-24,33,94,beat*.46);
+    if((upbeat&&[2,6,10,14].includes(pos))||(!upbeat&&pos===0)){
+      const program=DEMO_PROGRAMS[upbeat?(tr.rhythm===3?2:3):(tr.rhythm===2?4:1)];
+      for(const key of chord.notes)sampleBeat(tr,1,key,program,upbeat?80:72,beat*(upbeat?.3:.64));
+    }
+  }
   function stopTransport(announce = true) {
     transportGeneration++;
     const wasPaused=paused;paused=false;pauseDisplay=null;
@@ -416,8 +460,8 @@
       const b = transport.bus, now = ctx.currentTime;
       b.gain.cancelScheduledValues(now);
       if(wasPaused)b.gain.setValueAtTime(0,now);else b.gain.setTargetAtTime(.00001, now, .02);
-      const channels=transport.channelBuses||[];
-      setTimeout(() => { try { channels.forEach(c=>{c.gain.disconnect();c.pan?.disconnect();}); b.disconnect(); } catch (_) {} }, 2500);
+      const channels=transport.channelBuses||[],backing=transport.backingBus;
+      setTimeout(() => { try { channels.forEach(c=>{c.gain.disconnect();c.pan?.disconnect();}); backing?.disconnect();b.disconnect(); } catch (_) {} }, 2500);
     }
     transport = null;
     if(wasPaused&&ctx)ctx.resume().catch(()=>{});
@@ -430,22 +474,30 @@
   }
   function scheduleStep() {
     if (!transport) return;
-    const tr = transport, step = tr.step, at = tr.nextTime, beat = 60 / tr.bpm;
+    const tr = transport, beat = 60 / tr.bpm;
+    let step=tr.step,at=tr.nextTime;
     if (tr.type === 'demo') {
       const song = SONGS[tr.song];
       if (step >= song.bars * STEPS_PER_BAR) {
-        if (loop) { clearInterval(loop); loop = null; }
-        if (!endTimer) endTimer = clockTimer(at+.65,() => { stopTransport(); show('DEMO FINISHED', song.title.toUpperCase()); });
-        return false;
+        if($('demoLoop').checked){
+          // Keep the same bus and audio-clock grid. Existing envelopes and
+          // release tails naturally overlap the first beat of the next pass.
+          tr.repeatCount++;tr.start=tr.origin+tr.repeatCount*song.bars*4*beat;
+          tr.step=step=0;tr.nextTime=at=tr.start;
+        }else{
+          if(loop){clearInterval(loop);loop=null;}
+          if(!endTimer)endTimer=clockTimer(at+.65,()=>finishDemo(tr));
+          return false;
+        }
       }
-      drumsForStep(step, at, song.rhythm, tr.bus);
+      drumsForStep(step, at, song.rhythm, tr.backingBus);
       const chord = chordInfo(song.chords[Math.floor(step / 16) % song.chords.length]);
       if (step % 4 === 0) {
         const note = chord.root - (step % 16 === 8 ? 17 : 24);
-        voice(note, at, beat * .52, 10, .30, tr.bus);
+        voice(note, at, beat * .52, 10, .34, tr.backingBus);
       }
-      if (step % 16 === 0 && song.rhythm !== 3 && song.rhythm !== 4) chordAt(chord, at, beat, song.rhythm, tr.bus);
-      if ((song.rhythm === 3 || song.rhythm === 4) && [2,6,10,14].includes(step % 16)) chordAt(chord, at, beat, song.rhythm, tr.bus);
+      if (step % 16 === 0 && song.rhythm !== 3 && song.rhythm !== 4) chordAt(chord, at, beat, song.rhythm, tr.backingBus);
+      if ((song.rhythm === 3 || song.rhythm === 4) && [2,6,10,14].includes(step % 16)) chordAt(chord, at, beat, song.rhythm, tr.backingBus);
       if (!melodyOff) {
         const play = song.events.filter(n => n.step === step);
         for (const n of play) {
@@ -456,22 +508,32 @@
       }
       if (step % 16 === 0) demoDisplay(tr,Math.floor(step/16)+1);
     } else if (tr.type === 'rhythm') {
-      drumsForStep(step, at, tr.rhythm, tr.bus);
+      if(tr.sampleBank){sampledRhythmStep(tr,step,beat);}
+      else {
+      drumsForStep(step, at, tr.rhythm, tr.backingBus);
       if (autoChord && heldChord) {
         const chord = chordInfo(heldChord);
-        if (step % 4 === 0) voice(chord.root - 24, at, beat * .46, 10, .27, tr.bus);
-        if ([2, 6, 10, 14].includes(step % 16) && (tr.rhythm === 3 || tr.rhythm === 4)) chordAt(chord, at, beat, tr.rhythm, tr.bus);
-        else if (step % 16 === 0 && tr.rhythm !== 3 && tr.rhythm !== 4) chordAt(chord, at, beat, tr.rhythm, tr.bus);
+        if (step % 4 === 0) voice(chord.root - 24, at, beat * .46, 10, .32, tr.backingBus);
+        if ([2, 6, 10, 14].includes(step % 16) && (tr.rhythm === 3 || tr.rhythm === 4)) chordAt(chord, at, beat, tr.rhythm, tr.backingBus);
+        else if (step % 16 === 0 && tr.rhythm !== 3 && tr.rhythm !== 4) chordAt(chord, at, beat, tr.rhythm, tr.backingBus);
+      }
       }
     }
     tr.step++;
-    tr.nextTime += beat / 4;
+    tr.nextTime = tr.type==='demo'?tr.start+tr.step*beat/4:tr.nextTime+beat/4;
     return true;
   }
   function tick() {
     if (!transport || !ctx || paused) return;
+    const tr=transport;
+    if(tr.type==='rhythm'&&tr.sampleBank){
+      const now=ctx.currentTime;
+      tr.sampleOff=tr.sampleOff.filter(e=>{if(e.at<=now){tr.sampleBank.songOff(e.note);return false;}return true;});
+      const stepLength=60/tr.bpm/4;
+      if(now-tr.nextTime>stepLength){const missed=Math.floor((now-tr.nextTime)/stepLength);tr.step+=missed;tr.nextTime+=missed*stepLength;}
+    }
     let count = 0;
-    while (transport && transport.nextTime < ctx.currentTime + .135 && count++ < 20) {
+    while (transport && transport.nextTime < ctx.currentTime + (tr.type==='rhythm'&&tr.sampleBank?0:.135) && count++ < 20) {
       if (!scheduleStep()) break;
     }
   }
@@ -480,21 +542,33 @@
     const request=++transportGeneration;
     if(!await audio()||request!==transportGeneration)return;
     stopTransport(false);
+    startDemo(index,0);
+  }
+  function finishDemo(tr){
+    if(transport!==tr)return;
+    const index=demoIndex(tr),repeatCount=(tr.repeatCount||0)+1,repeat=$('demoLoop').checked;
+    stopTransport(false);
+    if(repeat)startDemo(index,repeatCount);
+    else show('DEMO FINISHED',SONGS[index].title.toUpperCase());
+  }
+  function startDemo(index,repeatCount){
     const song=SONGS[index];
     if(bank){
       transport=makeMidiTransport('demo',demoArrangement(index),bank,createBus());
-      transport.demoIndex=index;transport.demoBar=1;transport.localLead=[];transport.bus.gain.value=.70;
+      transport.demoIndex=index;transport.demoBar=1;transport.repeatCount=repeatCount;transport.origin=transport.start;transport.localLead=[];transport.bus.gain.value=.70;backingBus(transport);updateBacking();
       loop=setInterval(midiTick,25);reflectButtons();demoDisplay(transport,1);midiTick();
     }else{
-      transport={type:'demo',song:index,step:0,nextTime:ctx.currentTime+.08,bpm:song.tempo,bus:createBus()};
-      transport.bus.gain.value=.70;
+      const start=ctx.currentTime+.08;
+      transport={type:'demo',song:index,step:0,start,origin:start,nextTime:start,bpm:song.tempo,bus:createBus(),repeatCount};
+      transport.bus.gain.value=.70;backingBus(transport);
       loop=setInterval(tick,25);reflectButtons();demoDisplay(transport,1);tick();
     }
   }
   async function beginRhythm() {
     if (!await audio()) return;
     stopTransport(false);
-    transport = { type: 'rhythm', rhythm, step: 0, nextTime: ctx.currentTime + .08, bpm: tempo, bus: createBus() };
+    transport = { type: 'rhythm', rhythm, step: 0, nextTime: ctx.currentTime + .08, bpm: tempo, bus: createBus(), sampleBank:bank, sampleOff:[] };
+    backingBus(transport);if(bank){bank.stopSong();updateBacking();}
     loop = setInterval(tick, 25);
     reflectButtons();
     show(RHYTHMS[rhythm].name.toUpperCase() + ' RHYTHM', tempo + ' BPM - PLAYING');
@@ -515,7 +589,11 @@
     if (autoChord && midi < 60 && transport?.type !== 'demo' && transport?.type !== 'midi') {
       heldChord = label(midi + 12) + ($('chordType').value === 'minor' ? 'm' : '');
       const chord = chordInfo(heldChord);
-      const sounds = chord.notes.map(n => voice(n, ctx.currentTime, .0, 2, .12, master, true));
+      let sounds;
+      if(bank){
+        const currentBank=bank;currentBank.songControl({channel:3,control:7,value:scaledBacking(3)});
+        sounds=chord.notes.map(key=>{const note=sampleNote(3,key,19,80);currentBank.songOn(note);return {release(){currentBank.songOff(note);}};});
+      }else sounds=chord.notes.map(n=>voice(n,ctx.currentTime,0,2,.15,backingPreview,true));
       held.set(token, { midi, sound: { release: t => sounds.forEach(s => s.release(t)) }, started: ctx.currentTime, chord: true });
       show('AUTO CHORD ' + heldChord.toUpperCase(), 'PLAY HIGHER KEYS FOR THE MELODY');
     } else {
@@ -665,11 +743,12 @@
       let work=0;
       while(tr.index<tr.events.length && tr.start+tr.events[tr.index].time<=now && work++<2048){
         const e=tr.events[tr.index++],n=e.note;
-        if(e.kind==='control'){tr.sampleBank.songControl(e);applyMidiControl(tr,e,now);continue;}
+        if(e.kind==='control'){const control=tr.type==='demo'&&e.control===7&&[1,2,9].includes(e.channel)?{...e,value:scaledBacking(e.channel,e.value)}:e;tr.sampleBank.songControl(control);applyMidiControl(tr,control,now);continue;}
         if(e.kind==='off'){tr.sampleBank.songOff(n);continue;}
         const end=tr.start+n.time+n.duration;
         if(end<=now||(tr.type==='demo'&&melodyOff&&n.channel===0))continue;
-        if(tr.type==='demo'&&n.channel===0&&followDemoVoice&&engine!=='soundfont'){
+        if(tr.type==='demo'&&n.channel===9&&!tr.sampleBank.hasDrums){drum(EK1MIDI.drumFor(n.key),now,n.velocity/127*.55,tr.backingBus);}
+        else if(tr.type==='demo'&&n.channel===0&&followDemoVoice&&engine!=='soundfont'){
           const sound=demoLeadSound(n.key,now,end-now,tr,EK1MIDI.toneFor(n.program),.25);tr.localLead.push({sound,end:end+.7});
         }else if(followsMidiVoice(tr,n)){
           if(engine==='soundfont'){
@@ -686,10 +765,19 @@
         const bar=Math.min(16,1+Math.floor(Math.max(0,now-tr.start)/(240/SONGS[tr.demoIndex].tempo)));
         if(bar!==tr.demoBar){tr.demoBar=bar;demoDisplay(tr,bar);}
       }
+      if(tr.type==='demo'&&$('demoLoop').checked&&tr.index===tr.events.length&&now>=tr.start+tr.song.duration){
+        // All authored note-offs precede the boundary. Advance the timeline
+        // without resetting the synthesizer or adding any restart delay.
+        // Skip whole elapsed cycles if the browser has been throttled.
+        tr.repeatCount+=Math.max(1,Math.floor((now-tr.start)/tr.song.duration));
+        tr.start=tr.origin+tr.repeatCount*tr.song.duration;
+        tr.index=0;tr.demoBar=1;demoDisplay(tr,1);
+        midiTick();return;
+      }
       if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+(repeatMidi(tr)?.15:.7)){
         if(tr.type==='midi'){finishMidi(tr);return;}
-        const title=tr.type==='demo'?SONGS[tr.demoIndex].title.toUpperCase():'PRESS PLAY TO REPEAT';
-        stopTransport(false);show(tr.type==='demo'?'DEMO FINISHED':tr.type==='take'?'PLAYBACK FINISHED':'MIDI FINISHED',title);
+        if(tr.type==='demo'){finishDemo(tr);return;}
+        stopTransport(false);show('PLAYBACK FINISHED','PRESS PLAY TO REPEAT');
       }
       return;
     }
@@ -944,6 +1032,7 @@
       $('tempoValue').textContent = tempo + ' BPM';
       if (transport?.type === 'rhythm') transport.bpm = tempo;
     });
+    $('backingVolume').addEventListener('input',()=>{backingVolume=Number($('backingVolume').value)/100;$('backingVolumeValue').textContent=Math.round(backingVolume*100)+'%';updateBacking();});
     $('volume').addEventListener('input', () => {
       volume = Number($('volume').value) / 100;
       if (ctx) outputStage.setVolume(volume);
@@ -987,7 +1076,7 @@
     });
     $('accomp').addEventListener('click', () => {
       autoChord = !autoChord;
-      if (!autoChord) heldChord = null;
+      if (!autoChord) {heldChord=null;for(const [token,entry] of held)if(entry.chord)release(token);if(transport?.type==='rhythm'){bank?.stopSongChannel(1);bank?.stopSongChannel(2);} }
       reflectButtons(); show('AUTO CHORD ' + (autoChord ? 'ON' : 'OFF'), autoChord ? 'PLAY C3–B3 TO CHOOSE A CHORD' : 'NORMAL KEYBOARD');
     });
     $('chordType').addEventListener('change', () => { if (autoChord && heldChord) heldChord = heldChord.replace(/m$/, '') + ($('chordType').value === 'minor' ? 'm' : ''); });
@@ -1027,9 +1116,10 @@
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
     returnToKeyboard,
-    get state() { return { midiLoop:$('midiLoop').checked,midiRepeats:transport?.repeatCount||0,midiOverride, lastMidiOverride:transport?.lastOverride||null, keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    get state() { return { demoLoop:$('demoLoop').checked,demoRepeats:transport?.type==='demo'?(transport.repeatCount||0):0,demoCycleStart:transport?.type==='demo'?transport.start:null,backingVolume, accompanimentEngine:transport?.type==='rhythm'?(transport.sampleBank?'soundfont':'classic'):null, backingSampleKeys:bank?[1,2,3,9].reduce((sum,c)=>sum+bank.songChannelKeys(c),0):0, sampleChordKeys:bank?.songChannelKeys(1)||0,sampleBassKeys:bank?.songChannelKeys(2)||0,sampleDrumKeys:bank?.songChannelKeys(9)||0,midiLoop:$('midiLoop').checked,midiRepeats:transport?.repeatCount||0,midiOverride, lastMidiOverride:transport?.lastOverride||null, keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoArrangement,
+    outputRms(){if(!outputMeter)return 0;const samples=new Float32Array(outputMeter.fftSize);outputMeter.getFloatTimeDomainData(samples);return Math.sqrt(samples.reduce((sum,n)=>sum+n*n,0)/samples.length);},
     outputPeak(){if(!outputMeter)return 0;const samples=new Float32Array(outputMeter.fftSize);outputMeter.getFloatTimeDomainData(samples);return samples.reduce((peak,n)=>Math.max(peak,Math.abs(n)),0);},
     demoBars: index => SONGS[index]?.bars,
     parseBar
