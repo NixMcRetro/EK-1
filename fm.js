@@ -50,7 +50,8 @@
         const value=elapsed<e.attack?e.peak*elapsed/e.attack:elapsed<e.attack+e.decay?e.peak*(1-(1-e.s)*(elapsed-e.attack)/e.decay):e.peak*e.s;
         const param=gains[i].gain;
         param.cancelScheduledValues(off);
-        param.setValueAtTime(value,off);
+        if(elapsed<e.attack+e.decay) param.linearRampToValueAtTime(value,off);
+        else param.setValueAtTime(value,off);
         param.linearRampToValueAtTime(0,off+e.release);
         try{oscs[i].stop(off+e.release+.015);}catch{}
       });
