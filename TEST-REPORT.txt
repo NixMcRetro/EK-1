@@ -11,3 +11,5 @@ PASS: mobile layout at 390 px, zero horizontal document overflow.
 PASS: GitHub Actions run 45553778163 on commit 966b152c3ad65cf22b0420aacb833dedaa3baec0 completed successfully: direct-file keyboard and SoundFont regression, FM rendering, composition, project, WAV/MP3, integrity and packaging checks (Chromium, Firefox, WebKit on Linux as covered by the test suite).
 LIMIT: native macOS Safari and physical touch hardware remain untested; the full Casino Night song was not played in real time.
 LICENCE: original EK-1 application GPL-3.0-or-later; no deployment made.
+
+0.9.1 candidate: see current GitHub Actions for new sampled-demo and STOP regression results. Earlier results above refer to 0.9.0.

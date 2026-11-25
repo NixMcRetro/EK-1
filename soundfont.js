@@ -53,9 +53,20 @@
         if(n<=1){counts.delete(id);if(n)synth.noteOff(channel,key);}
         else counts.set(id,n-1);
       }
+      function stopSongChannel(c){
+        if(!Number.isInteger(c)||c<0||c>15||disposed)return;
+        synth.controllerChange(c,120,0);
+        for(const [id,n] of songKeys)if(n.channel===c)songKeys.delete(id);
+        for(const id of counts.keys())if(Math.floor(id/128)===c)counts.delete(id);
+      }
+      function stopLive(){
+        if(disposed)return;
+        synth.controllerChange(live,120,0);
+        for(let k=0;k<128;k++)counts.delete(live*128+k);
+      }
       function stopSong(){
         for(let c=0;c<16;c++){
-          synth.controllerChange(c,120,0);
+          stopSongChannel(c);
           synth.controllerChange(c,121,0);
           synth.controllerChange(c,0,0);synth.controllerChange(c,32,0);
           synth.controllerChange(c,7,100);synth.controllerChange(c,10,64);synth.controllerChange(c,11,127);
@@ -83,7 +94,8 @@
         songOff(n){const id=n.channel*128+n.key;if(songKeys.get(id)===n){synth.noteOff(n.channel,n.key);songKeys.delete(id);}},
         songControl(e){synth.controllerChange(e.channel,e.control,e.value);},
         get songKeys(){return songKeys.size;},
-        stopSong,
+        stopSong,stopSongChannel,stopLive,
+        songChannelKeys(c){let n=0;for(const note of songKeys.values())if(note.channel===c)n++;return n;},
         destroy(){if(!disposed){disposed=true;synth.stopAll(true);synth.destroy();counts.clear();}}
       };
     }catch(e){if(synth)synth.destroy();throw e;}

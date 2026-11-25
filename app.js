@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v0.9.0. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.9.1. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.9.0';
+  const VERSION = '0.9.1';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -105,7 +105,7 @@
       ]
     }
   ];
-  let ctx, master, noise, transport = null, loop = null, endTimer = null;
+  let ctx, master, noise, transport = null, loop = null, endTimer = null, transportGeneration = 0;
   let tone = 0, rhythm = 0, tempo = 116, volume = .7, melodyOff = false, autoChord = false;
   let heldChord = null, recording = false, take = [], takeStart = 0, recordTimer = null;
   let importedMidi = null, midiName = '', importRequest = 0;
@@ -142,6 +142,38 @@
     }
     return {...song, events, bars: 16};
   });
+  // Same authored score, rhythm and accompaniment as Classic demos.
+  // GM patches on song channels; live playing remains on channel 16.
+  const DEMO_PROGRAMS = [0,4,19,21,48,56,61,12,80,89,33,73];
+  function demoArrangement(index) {
+    const song=SONGS[index];if(!song)throw Error('Unknown demo.');
+    const beat=60/song.tempo, notes=[], controls=[];
+    const add=(channel,key,step,length,tone,velocity)=>notes.push({channel,key,time:step*beat/4,duration:length*beat,program:channel===9?0:DEMO_PROGRAMS[tone],bankMSB:0,bankLSB:0,velocity});
+    const pattern=RHYTHMS[song.rhythm], upbeat=song.rhythm===3||song.rhythm===4;
+    for(let step=0;step<song.bars*STEPS_PER_BAR;step++){
+      const pos=step%16, chord=chordInfo(song.chords[Math.floor(step/16)%song.chords.length]);
+      if(pattern.kick[pos]==='1')add(9,36,step,.20,0,100);
+      if(pattern.snare[pos]==='1')add(9,38,step,.18,0,88);
+      if(pattern.hat[pos]==='1')add(9,42,step,.11,0,pos%4===2?78:53);
+      if(step%4===0)add(2,chord.root-(pos===8?17:24),step,.52,10,87);
+      if((upbeat&&[2,6,10,14].includes(pos))||(!upbeat&&pos===0)){
+        const tone=upbeat?(song.rhythm===3?2:3):(song.rhythm===2?4:1);
+        for(const key of chord.notes)add(1,key,step,upbeat?.3:.64,tone,upbeat?66:55);
+      }
+    }
+    for(const n of song.events){
+      const tone=song.sections?song.sections[Math.floor(n.step/64)%song.sections.length]:song.lead;
+      add(0,n.midi,n.step,n.length*.91,tone,100);
+    }
+    for(const [channel,level,pan] of [[0,105,64],[1,75,53],[2,90,64],[9,87,64]])controls.push({time:0,channel,control:7,value:level},{time:0,channel,control:10,value:pan});
+    notes.sort((a,b)=>a.time-b.time||a.channel-b.channel);
+    return {notes,controls,channels:[0,1,2,9],duration:song.bars*4*beat};
+  }
+  function demoIndex(tr=transport){return tr?.type==='demo'?(tr.demoIndex??tr.song):null;}
+  function demoDisplay(tr,bar){
+    const index=demoIndex(tr),song=SONGS[index];
+    show(String(index+1).padStart(2,'0')+' '+song.title.toUpperCase(),'DEMO • '+(tr.sampleBank?'SF':'CLASSIC')+' • BAR '+bar+'/'+song.bars+(melodyOff?' • MELODY OFF':''));
+  }
   async function audio() {
     if (!ctx) {
       const Audio = window.AudioContext || window.webkitAudioContext;
@@ -172,6 +204,8 @@
   }
   function reflectButtons() {
     $('playDemo').textContent = transport?.type === 'demo' ? 'DEMO ■' : 'DEMO';
+    $('playDemo').disabled = bankLoading || recording;
+    $('demoSound').textContent = bank ? 'Demo playback: SoundFont' : 'Demo playback: Classic';
     $('startRhythm').textContent = transport?.type === 'rhythm' ? 'PLAYING' : 'START';
     $('record').textContent = recording ? '■ STOP REC' : '● REC';
     $('record').setAttribute('aria-pressed', String(recording));
@@ -304,6 +338,7 @@
     keyElements.forEach(node => node.classList.remove('lit'));
   }
   function stopTransport(announce = true) {
+    transportGeneration++;
     if (loop) { clearInterval(loop); loop = null; }
     if (endTimer) { clearTimeout(endTimer); endTimer = null; }
     clearLamps();
@@ -348,7 +383,7 @@
           lamp(n.midi, at, n.length * beat);
         }
       }
-      if (step % 16 === 0) show(('0' + (tr.song + 1)).slice(-2) + ' ' + song.title.toUpperCase(), 'DEMO • BAR ' + (Math.floor(step / 16) + 1) + '/' + song.bars + (melodyOff ? ' • MELODY OFF' : ''));
+      if (step % 16 === 0) demoDisplay(tr,Math.floor(step/16)+1);
     } else if (tr.type === 'rhythm') {
       drumsForStep(step, at, tr.rhythm, tr.bus);
       if (autoChord && heldChord) {
@@ -370,14 +405,19 @@
     }
   }
   async function beginDemo(index) {
-    if (!await audio()) return;
+    if(bankLoading||recording||!SONGS[index])return;
+    const request=++transportGeneration;
+    if(!await audio()||request!==transportGeneration)return;
     stopTransport(false);
-    const song = SONGS[index];
-    transport = { type: 'demo', song: index, step: 0, nextTime: ctx.currentTime + .08, bpm: song.tempo, bus: createBus() };
-    loop = setInterval(tick, 25);
-    reflectButtons();
-    show(('0' + (index + 1)).slice(-2) + ' ' + song.title.toUpperCase(), 'DEMO • BAR 1/16');
-    tick();
+    const song=SONGS[index];
+    if(bank){
+      transport=makeMidiTransport('demo',demoArrangement(index),bank,createBus());
+      transport.demoIndex=index;transport.demoBar=1;
+      loop=setInterval(midiTick,25);reflectButtons();demoDisplay(transport,1);midiTick();
+    }else{
+      transport={type:'demo',song:index,step:0,nextTime:ctx.currentTime+.08,bpm:song.tempo,bus:createBus()};
+      loop=setInterval(tick,25);reflectButtons();demoDisplay(transport,1);tick();
+    }
   }
   async function beginRhythm() {
     if (!await audio()) return;
@@ -515,10 +555,18 @@
         if(e.kind==='control'){tr.sampleBank.songControl(e);continue;}
         if(e.kind==='off'){tr.sampleBank.songOff(n);continue;}
         const end=tr.start+n.time+n.duration;
-        if(end<=now)continue;
-        tr.sampleBank.songOn(n);lamp(n.key,now,end-now);
+        if(end<=now||(tr.type==='demo'&&melodyOff&&n.channel===0))continue;
+        tr.sampleBank.songOn(n);
+        if(tr.type!=='demo'||n.channel===0)lamp(n.key,now,end-now);
       }
-      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show(tr.type==='take'?'PLAYBACK FINISHED':'MIDI FINISHED','PRESS PLAY TO REPEAT');}
+      if(tr.type==='demo'){
+        const bar=Math.min(16,1+Math.floor(Math.max(0,now-tr.start)/(240/SONGS[tr.demoIndex].tempo)));
+        if(bar!==tr.demoBar){tr.demoBar=bar;demoDisplay(tr,bar);}
+      }
+      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+.7){
+        const title=tr.type==='demo'?SONGS[tr.demoIndex].title.toUpperCase():'PRESS PLAY TO REPEAT';
+        stopTransport(false);show(tr.type==='demo'?'DEMO FINISHED':tr.type==='take'?'PLAYBACK FINISHED':'MIDI FINISHED',title);
+      }
       return;
     }
     const controls=tr.song.controls||[];
@@ -749,10 +797,14 @@
       if (recording) endRecord();
       stopTransport();
       if (ctx) stopHeld();
+      bank?.stopLive();
     });
     $('melodyOff').addEventListener('click', () => {
       melodyOff = !melodyOff; reflectButtons();
-      if (transport?.type === 'demo') show('DEMO ' + (transport.song + 1), melodyOff ? 'MELODY OFF • PLAY ALONG' : 'MELODY ON');
+      if (transport?.type === 'demo') {
+        if(melodyOff&&transport.sampleBank){transport.sampleBank.stopSongChannel(0);clearLamps();}
+        demoDisplay(transport,transport.sampleBank?transport.demoBar:Math.min(16,1+Math.floor(transport.step/16)));
+      }
     });
     $('accomp').addEventListener('click', () => {
       autoChord = !autoChord;
@@ -795,8 +847,9 @@
     tones: TONES.length,
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
-    get state() { return { transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: transport?.type === 'demo' ? transport.song : null, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    get state() { return { transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
+    demoArrangement,
     demoBars: index => SONGS[index]?.bars,
     parseBar
   });

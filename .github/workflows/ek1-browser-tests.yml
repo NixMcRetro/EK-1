@@ -35,11 +35,11 @@ jobs:
       - name: Composition, project and audio export
         run: node .github/tests/ek1-composition-browser.mjs
       - name: Package exactly the tested source
-        run: git archive --format=zip --prefix=EK-1-v0.9.0/ --output=EK-1-v0.9.0-offline.zip HEAD
+        run: git archive --format=zip --prefix=EK-1-v0.9.1/ --output=EK-1-v0.9.1-offline.zip HEAD
       - uses: actions/upload-artifact@v4
         with:
-          name: EK-1-v0.9.0-offline
-          path: EK-1-v0.9.0-offline.zip
+          name: EK-1-v0.9.1-offline
+          path: EK-1-v0.9.1-offline.zip
           retention-days: 30
       - uses: actions/upload-artifact@v4
         if: always()

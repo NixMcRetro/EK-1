@@ -2,6 +2,13 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.1] - SoundFont demos and playback reliability
+
+- All five original demos use the loaded SoundFont, with separate GM melody, chord, bass and percussion channels.
+- Preserve live voice selection, melody-off play-along, demo switching and classic fallback.
+- STOP silences held sampled notes; sampled melody muting releases the lead channel immediately.
+- Display the active demo sound engine and add regression coverage.
+
 ## [0.9.0] - Offline release candidate
 
 - Refined note holds, rests and melody variation; unsaved-arrangement protection.

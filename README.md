@@ -1,6 +1,6 @@
 # Electronic Keyboard (Model EK-1)
 
-Development version **0.9.0**. A 49-key browser instrument inspired by classic home keyboards, with 12 classic voices, eight original six-operator FM voices, six rhythms, five original demos, MIDI playback, and a four-part Song Builder. No affiliation with Casio or Yamaha.
+Development version **0.9.1**. A 49-key browser instrument inspired by classic home keyboards, with 12 classic voices, eight original six-operator FM voices, six rhythms, five original demos, MIDI playback, and a four-part Song Builder. No affiliation with Casio or Yamaha.
 
 ## Start playing
 
@@ -8,7 +8,7 @@ Extract the whole ZIP and open `index.html` in a current browser. No local serve
 
 ## Instruments and SoundFonts
 
-Choose a Classic or FM voice in VOICE. FM offers brightness, attack and release. Use OPEN SOUNDFONT to open a local SF2/SF3 bank (maximum 512 MiB). No SoundFont is included. [FluidR3 GM](https://www.pianobooster.org/download.html) by Frank Wen is the recommended optional download (148 MB, MIT). Extract the downloaded bank if necessary, then open the SF2 file with the file picker. Imported SoundFonts stay available while switching Classic or FM voices. MIDI playback and composition use a loaded SoundFont, otherwise the built-in approximations. Bank files are never uploaded. Loading large banks, especially compressed SF3, can use more memory than the file size.
+Choose a Classic or FM voice in VOICE. FM offers brightness, attack and release. Use OPEN SOUNDFONT to open a local SF2/SF3 bank (maximum 512 MiB). No SoundFont is included. [FluidR3 GM](https://www.pianobooster.org/download.html) by Frank Wen is the recommended optional download (148 MB, MIT). Extract the downloaded bank if necessary, then open the SF2 file with the file picker. Imported SoundFonts stay available while switching Classic or FM voices. MIDI playback, all five built-in demos and composition use a loaded SoundFont, otherwise the built-in approximations. Original demo melodies, rhythms and chords are preserved, with GM lead, chord, bass and drum channels. MELODY OFF immediately silences the sampled lead while accompaniment continues. Your playing voice stays independent. A narrow or non-GM bank may substitute instruments for missing presets. STOP also silences held SoundFont notes. Bank files are never uploaded. Loading large banks, especially compressed SF3, can use more memory than the file size.
 
 ## Song Builder
 

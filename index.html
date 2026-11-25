@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
   <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twenty built-in voices, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.9.0</title>
+  <title>Electronic Keyboard (Model EK-1) v0.9.1</title>
   <link rel="stylesheet" href="./style.css">
   <script src="./midi.js" defer></script>
   <script src="./vendor/spessasynth-local.js" defer></script>
@@ -31,7 +31,7 @@
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
         <span class="product-spec">49 KEYS · DIGITAL SOUND</span>
-        <span class="version">v0.9.0</span>
+        <span class="version">v0.9.1</span>
       </div>
     </header>
 
@@ -97,7 +97,7 @@
             <h2 id="rhythmHeading">AUTO ACCOMPANIMENT</h2>
             <div class="control-row">
               <button id="startRhythm" type="button" class="start-button">START</button>
-              <button id="stop" type="button">STOP ■</button>
+              <button id="stop" type="button" title="Stop playback and silence held notes">STOP ■</button>
               <button id="accomp" type="button" aria-pressed="false">AUTO CHORD</button>
               <label class="select-wrap chord-wrap" for="chordType"><span>CHORD</span>
                 <select id="chordType"><option value="major">Major</option><option value="minor">Minor</option></select>
@@ -173,9 +173,10 @@
       <input id="bankFile" type="file" accept=".sf2,.sf3" hidden>
       <button id="openBank" type="button">OPEN SOUNDFONT</button>
       <button id="closeBank" type="button" disabled>REMOVE SOUNDFONT</button>
+      <span id="demoSound" role="status" aria-live="polite">Demo playback: Classic</span>
     </div>
     <p class="midi-note">Recommended: <a href="https://www.pianobooster.org/download.html" target="_blank" rel="noopener noreferrer">FluidR3 GM</a> by Frank Wen (external download, 148 MB, MIT). Download the SF2 file separately, extract if necessary, then choose OPEN SOUNDFONT. No banks are included or fetched automatically.</p>
-    <p class="midi-note">Classic, FM and loaded SoundFont voices share the keyboard's VOICE menu. MIDI songs use the loaded SoundFont, if present, independently of your playing voice.</p>
+    <p class="midi-note">Classic, FM and loaded SoundFont voices share the keyboard's VOICE menu. MIDI songs and all five demos use the loaded SoundFont, if present, independently of your playing voice. MELODY OFF mutes the demo lead for play-along. STOP also silences held SoundFont notes.</p>
   </section>
   <div class="under-keyboard">
     <p class="play-hint"><strong>Just play.</strong> Use the keys above, or your computer keyboard: <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> <kbd>D</kbd> <kbd>C</kbd> … then <kbd>Q</kbd> <kbd>2</kbd> <kbd>W</kbd> <kbd>3</kbd> <kbd>E</kbd> …</p>
