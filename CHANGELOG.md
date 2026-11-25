@@ -7,6 +7,7 @@ All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 - Imported MIDI repeats by default, with an optional loop checkbox; song notes and controllers reset between passes.
 - PLAY MIDI returns to the keyboard by default, with an opt-out. Song Builder shares the same navigation helper.
 - Move Sound Library / SoundFonts directly below the instrument, before the other utility sections.
+- Place MIDI Songs before Song Builder.
 
 ## [0.9.8] - MIDI voice override and layout consistency
 

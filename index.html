@@ -151,6 +151,24 @@
 
   </section>
 
+  <section class="midi-strip" aria-labelledby="midiHeading">
+    <div class="midi-info">
+      <h2 id="midiHeading">MIDI SONGS</h2>
+      <p id="midiStatus" role="status" aria-live="polite">Open a MIDI file to listen or play along.</p>
+    </div>
+    <div class="midi-controls">
+      <input id="midiFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" hidden>
+      <button id="openMidi" type="button">OPEN MIDI</button>
+      <button id="playMidi" type="button" disabled>PLAY MIDI</button>
+      <button id="saveMidi" type="button" disabled>SAVE MIDI COPY</button>
+      <button id="exportTake" type="button" disabled>EXPORT RECORDING</button>
+    </div>
+    <div class="midi-playback-options"><label><input type="checkbox" id="midiLoop" checked> Loop MIDI</label><label><input type="checkbox" id="midiReturn" checked> Return to keyboard on playback</label></div>
+    <div id="midiVoiceOptions" class="midi-voice-options" hidden><label for="midiOverride">MIDI VOICE <select id="midiOverride"><option value="original">Original instruments</option></select></label><p class="midi-note">Choose which melodic channels follow VOICE. Changes apply to the next notes, without restarting playback.</p></div>
+    <div id="midiLegend" class="midi-legend" aria-label="MIDI channel colours" hidden></div>
+    <p class="midi-note">Key colours identify MIDI channels. Shared pitches show split colours; percussion and out-of-range notes are not lit.</p>
+  </section>
+
   <details class="song-builder">
     <summary>SONG BUILDER <span>Make your own music</span></summary>
     <p class="compose-intro">Choose a style, generate an arrangement, and edit any chord or melody note. Play it back or save a MIDI file.</p>
@@ -179,23 +197,7 @@
     </details>
     <p id="composeStatus" role="status" aria-live="polite">Your first arrangement is ready to play. Changes are kept until you close or reload the page.</p>
   </details>
-  <section class="midi-strip" aria-labelledby="midiHeading">
-    <div class="midi-info">
-      <h2 id="midiHeading">MIDI SONGS</h2>
-      <p id="midiStatus" role="status" aria-live="polite">Open a MIDI file to listen or play along.</p>
-    </div>
-    <div class="midi-controls">
-      <input id="midiFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" hidden>
-      <button id="openMidi" type="button">OPEN MIDI</button>
-      <button id="playMidi" type="button" disabled>PLAY MIDI</button>
-      <button id="saveMidi" type="button" disabled>SAVE MIDI COPY</button>
-      <button id="exportTake" type="button" disabled>EXPORT RECORDING</button>
-    </div>
-    <div class="midi-playback-options"><label><input type="checkbox" id="midiLoop" checked> Loop MIDI</label><label><input type="checkbox" id="midiReturn" checked> Return to keyboard on playback</label></div>
-    <div id="midiVoiceOptions" class="midi-voice-options" hidden><label for="midiOverride">MIDI VOICE <select id="midiOverride"><option value="original">Original instruments</option></select></label><p class="midi-note">Choose which melodic channels follow VOICE. Changes apply to the next notes, without restarting playback.</p></div>
-    <div id="midiLegend" class="midi-legend" aria-label="MIDI channel colours" hidden></div>
-    <p class="midi-note">Key colours identify MIDI channels. Shared pitches show split colours; percussion and out-of-range notes are not lit.</p>
-  </section>
+
 
 
   <div class="under-keyboard">

@@ -11,6 +11,7 @@ try{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(pathToFileURL(resolve('index.html')).href);
  assert(await page.evaluate(()=>document.querySelector('.instrument').nextElementSibling===document.querySelector('.soundfont-strip')));
+ assert(await page.evaluate(()=>document.querySelector('.soundfont-strip').nextElementSibling===document.querySelector('[aria-labelledby="midiHeading"]')&&document.querySelector('[aria-labelledby="midiHeading"]').nextElementSibling===document.querySelector('.song-builder')));
  assert(await page.locator('#midiLoop').isChecked());
  assert(await page.locator('#midiReturn').isChecked());
  const bytes=EK1MIDI.encodeTake([{midi:60,t:0,length:.45,tone:0},{midi:64,t:.45,length:.45,tone:10}]);
