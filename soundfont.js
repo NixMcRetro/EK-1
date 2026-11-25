@@ -78,16 +78,16 @@
         presets,get selected(){return selected;},get voices(){return synth.voiceCount;},
         select,
         liveOn(key,velocity){on(live,key,velocity);let released=false;return {release(){if(!released){released=true;off(live,key);}}};},
-        songOn(n){
+        songOn(n,override=null){
           const id=n.channel*128+n.key;
           // A new note on the same MIDI key replaces the old one. Never defer
           // note-off until every overlapping note has ended.
           if(songKeys.has(id))synth.noteOff(n.channel,n.key);
           if(n.channel!==9){
-            const patch=[n.bankMSB||0,n.bankLSB||0,n.program].join(':');
+            const preset=override||n,patch=[preset.bankMSB||0,preset.bankLSB||0,preset.program].join(':');
             if(patches.get(n.channel)!==patch){
-              synth.controllerChange(n.channel,0,n.bankMSB||0);synth.controllerChange(n.channel,32,n.bankLSB||0);
-              synth.programChange(n.channel,n.program);patches.set(n.channel,patch);
+              synth.controllerChange(n.channel,0,preset.bankMSB||0);synth.controllerChange(n.channel,32,preset.bankLSB||0);
+              synth.programChange(n.channel,preset.program);patches.set(n.channel,patch);
             }
           }
           synth.noteOn(n.channel,n.key,n.velocity);songKeys.set(id,n);

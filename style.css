@@ -432,3 +432,111 @@ footer {
 .compose-table th:first-child{width:68px}.section-bar{overflow-wrap:anywhere}.compose-table select{max-width:100%}.instrument .mobile-key-nav{color:#f1f1e8;padding:6px 10px}.instrument .mobile-key-nav button{color:#222}.song-builder #cancelExport[hidden]{display:none!important}.song-builder #cancelExport{margin-top:8px}.compose-tools a:focus-visible,footer a:focus-visible{outline:2px solid currentColor;outline-offset:3px}@media(max-width:760px){.compose-table th:first-child{width:54px}.compose-table{min-width:420px}}
 
 .compose-scroll{display:flex;align-items:center;gap:7px;margin:9px 0;font-size:12px;font-weight:700}.compose-scroll input{accent-color:#536853}
+
+/* Compact arrangement navigation; the keyboard faceplate stays unchanged. */
+.compose-overview{border-top:1px solid #b4b9ae;padding:8px 0}
+.compose-overview-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800;font-size:10px;letter-spacing:.04em}
+#composeLengthReadout{font-weight:400;color:#535d54;margin-left:5px;letter-spacing:0}
+#composeSections{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.song-builder .section-chip{font-size:11px;min-height:32px;padding:5px 9px;max-width:100%;overflow-wrap:anywhere}
+.song-builder .section-chip[aria-pressed=true]{background:#536853;color:#fff;border-color:#364537}
+.compose-editor>summary{font-size:12px;font-weight:700;cursor:pointer;padding:5px 0;color:#374437}
+.compose-editor>summary:focus-visible{outline:2px solid #384e36;outline-offset:2px}
+@media(max-width:760px){.song-builder .section-chip{min-height:44px}.compose-overview-heading{flex-wrap:wrap}}
+
+.sound-options{grid-column:1/-1;border-top:1px solid #b4b9ae;padding:8px 0 2px;color:#374437;font-size:12px}
+.sound-options>summary{cursor:pointer;font-weight:700}
+.sound-options-row{display:flex;align-items:end;flex-wrap:wrap;gap:9px;margin:9px 0}
+.sound-options-row label{display:grid;grid-template-columns:1fr auto;gap:4px;min-width:130px;max-width:100%;font-size:10px;font-weight:800}
+.sound-options-row label select,.sound-options-row label input{grid-column:1/-1;max-width:100%;min-width:0}
+.sound-options-row label input{accent-color:#536853}
+.sound-options-row label select{max-width:260px}
+.sound-options button[aria-pressed=true]{background:#536853;color:#fff}
+
+/* Note names are printed on the scrolling plastic rails, not on the keys. */
+.key-label-rail{position:relative;width:100%;min-width:1305px;height:18px;background:#303834;color:#d4ddd2;user-select:none;box-sizing:border-box;border-inline:1px solid #121714}
+.rail-note{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:10px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.key .note{display:none!important}
+.key.channel-lit{background:var(--channel-fill);color:#19211e;border-bottom-color:#52665b}
+.key.black.channel-lit{background:var(--channel-fill);color:#17211b;border-bottom-color:#304138}
+.key.channel-lit.pressed{box-shadow:inset 0 0 0 3px #f7f8ee}
+.octave-controls{display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:.07em}
+.keyboard-lip{align-items:center}
+.octave-controls button{font:inherit;color:#e5eae1;background:#454e48;border:1px solid #657169;border-radius:3px;padding:4px 8px;min-height:26px;box-shadow:none}
+.octave-controls button:disabled{opacity:.4}
+.midi-legend{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:#374437}
+.midi-legend[hidden]{display:none}
+.midi-legend span{display:inline-flex;align-items:center;gap:5px}
+.channel-swatch{width:12px;height:12px;border:1px solid #526057;border-radius:2px;display:inline-block}
+@media(min-width:1200px){.key-label-rail{min-width:0}}
+@media(max-width:760px){.octave-controls button{min-height:36px}.keyboard-lip{gap:5px;flex-wrap:wrap}.keyboard-lip>span:last-child{display:none}}
+
+/* Keep narrow rail labels legible at smaller desktop widths. */
+@media(min-width:1200px) and (max-width:1350px){.rail-note{font-size:9px}}
+
+.demo-follow{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:12px}.demo-follow input{accent-color:#536853}#pause[aria-pressed=true]{background:#afc5b0;color:#17291a}
+
+/* Consistent utility area, deliberately separate from the instrument faceplate. */
+[hidden]{display:none!important}
+.song-builder,.midi-strip,.under-keyboard,footer{margin:18px 4px 0;text-align:left;font-family:Arial,Helvetica,sans-serif;color:#303933}
+.song-builder,.midi-strip{border:0;border-top:1px solid #a5aaa0;padding:13px 0 0}
+.midi-strip{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:9px}
+.midi-info h2,.song-builder>summary{font-size:13px;line-height:1.5;font-weight:800;letter-spacing:.05em;margin:0}
+.midi-info p,.midi-note,.compose-intro,.compose-hint,#composeStatus,.play-hint,.small-print,.song-builder>summary span{font-size:13px;line-height:1.5;text-align:left;margin:0;overflow-wrap:anywhere}
+.midi-info p{margin-top:3px}
+.compose-intro,.compose-hint,#composeStatus{margin:8px 0}
+.midi-controls,.compose-actions,.sound-options-row,.compose-export-settings{display:flex;justify-content:flex-start;align-items:end;flex-wrap:wrap;gap:8px}
+.midi-controls button,.song-builder button,.sound-options button{font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.02em;line-height:1.25;min-height:38px;padding:8px 12px;border:1px solid #697369;border-bottom:3px solid #697369;border-radius:3px;background:#f0eee4;color:#28322a;cursor:pointer}
+.midi-controls button:disabled,.song-builder button:disabled,.sound-options button:disabled{opacity:.48;cursor:default}
+.sound-options button:hover:not(:disabled){background:#fffdf4}
+.sound-options button[aria-pressed=true],.song-builder .section-chip[aria-pressed=true]{background:#536853;color:#fff}
+.song-builder select,.song-builder input[type=number],.sound-options select,.midi-voice-options select{font:400 13px Arial,Helvetica,sans-serif;color:#28322a;background:#f0eee4;border:1px solid #697369;border-radius:3px;min-height:38px;padding:6px 8px;max-width:100%;min-width:0}
+.sound-options label,.compose-settings label,.compose-export-settings label,.midi-voice-options label,.section-actions label{font-size:11px;font-weight:800;letter-spacing:.03em;line-height:1.4}
+.compose-settings{grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px}
+.compose-settings button{width:100%}
+.compose-actions label,.midi-voice-options label{display:grid;gap:4px;min-width:0}
+.midi-voice-options{display:grid;justify-items:start;gap:5px}
+.midi-voice-options select{min-width:min(240px,100%)}
+.sound-options,.compose-editor,.utility-disclosure{border:0;border-top:1px solid #b4b9ae;margin:10px 0 0;padding:8px 0 0;font-size:13px;color:#374437}
+.sound-options>summary,.compose-editor>summary,.utility-disclosure>summary{font-size:13px;font-weight:700;line-height:1.5;letter-spacing:0;cursor:pointer;padding:2px 0}
+.sound-options-row{margin:9px 0;align-items:end}
+.sound-options-row label{min-width:150px;max-width:100%}
+.sound-options .demo-follow,.compose-scroll{font-size:13px;font-weight:400;letter-spacing:0}
+.compose-overview-heading{font-size:11px}
+.compose-table{font-size:12px;min-width:480px}
+.compose-table thead th{font-size:11px}
+.compose-table td>select+select{font-size:12px}
+.compose-table select{font-size:12px;min-height:34px}
+.compose-table th:first-child{width:60px}
+.compose-part label,.compose-part span,.mix-control{font-size:12px}
+.midi-legend{font-size:12px;line-height:1.5}
+#demoSound{font-size:13px}
+.under-keyboard{max-width:none;border-top:1px solid #a5aaa0;padding-top:12px}
+.under-keyboard p,footer p{margin:4px 0;text-align:left}
+footer{border-top:1px solid #a5aaa0;padding:12px 0 16px;font-size:12px;line-height:1.5}
+@media(max-width:760px){.song-builder,.midi-strip,.under-keyboard,footer{margin-inline:4px}.compose-settings{grid-template-columns:repeat(2,minmax(0,1fr))}.midi-controls button,.song-builder button,.sound-options button{min-height:44px}.midi-controls button{flex:0 1 auto}.sound-options-row label{flex:1 1 145px}.compose-overview-heading{align-items:flex-start}.compose-table{min-width:480px}}
+
+/* MIDI playback preferences share the compact utility typography. */
+.midi-playback-options{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;font-size:13px;line-height:1.5}
+.midi-playback-options label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.midi-playback-options input{accent-color:#536853;margin:0}
+
+/* Appearance is a page preference, not a change to the physical instrument. */
+.appearance-bar{display:flex;justify-content:flex-end;align-items:center;gap:7px;margin:0 4px 9px;font-size:12px;color:#535d54}
+.appearance-bar select{font:inherit;color:#28322a;background:#f0eee4;border:1px solid #697369;border-radius:3px;padding:5px 8px;min-height:30px}
+:root[data-theme="dark"]{color-scheme:dark;--page-bg:#202623;--page-ink:#e0e5df;--page-muted:#b6c2b8;--page-border:#56635b;--page-control:#343e37;--page-control-hover:#46554a;--page-accent:#91c4a5}
+:root[data-theme="dark"] body{background:var(--page-bg);color:var(--page-ink)}
+/* Native keyboard controls retain their original light physical appearance. */
+:root[data-theme="dark"] .instrument{color-scheme:light;box-shadow:0 5px 0 #151b17,0 15px 18px #0005}
+:root[data-theme="dark"] :is(.appearance-bar,.song-builder,.midi-strip,.under-keyboard,footer,.sound-options,.compose-editor,.utility-disclosure,.midi-legend){color:var(--page-ink)}
+:root[data-theme="dark"] :is(.midi-note,.compose-hint,.play-hint,.small-print,.section-bar,#composeLengthReadout){color:var(--page-muted)}
+:root[data-theme="dark"] :is(.song-builder,.midi-strip,.under-keyboard,footer,.sound-options,.compose-editor,.utility-disclosure,.compose-overview,.compose-part,.compose-table th,.compose-table td){border-color:var(--page-border)}
+:root[data-theme="dark"] :is(.appearance-bar select,.midi-controls button,.song-builder button,.sound-options button,.song-builder select,.song-builder input[type=number],.sound-options select,.midi-voice-options select){background:var(--page-control);color:var(--page-ink);border-color:#6b7a6e}
+:root[data-theme="dark"] :is(.midi-controls button,.song-builder button,.sound-options button):hover:not(:disabled){background:var(--page-control-hover)}
+:root[data-theme="dark"] :is(#composePlay,.song-builder .section-chip[aria-pressed=true],.sound-options button[aria-pressed=true]){background:#87b392;color:#19271d;border-color:#a3c5a9}
+:root[data-theme="dark"] :is(.compose-scroll input,.demo-follow input,.midi-playback-options input,.compose-part input,.sound-options-row input,.compose-tools progress){accent-color:var(--page-accent)}
+:root[data-theme="dark"] :is(.appearance-bar,.midi-strip,.song-builder,.under-keyboard,footer) :focus-visible{outline:2px solid var(--page-accent);outline-offset:2px}
+:root[data-theme="dark"] :is(.midi-strip,.song-builder,.under-keyboard,footer) a{color:var(--page-accent)}
+:root[data-theme="dark"] :is(.midi-strip,.song-builder,.under-keyboard,footer) a:visited{color:#c5b5df}
+:root[data-theme="dark"] kbd{background:var(--page-control);color:var(--page-ink);border-color:var(--page-border)}
+@media(max-width:760px){.appearance-bar select{min-height:36px}}

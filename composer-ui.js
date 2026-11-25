@@ -4,7 +4,55 @@
  'use strict';
  const C=EK1Composer,$=id=>document.getElementById(id), opt=(name,value)=>new Option(name,value);
  let song=C.create(),variation=0,exporting=false,dirty=false;
- function changed(){dirty=true;}
+ // Bounded, session-only history. One snapshot per committed edit, not
+ // per mouse movement. Opening a project begins a new history.
+ const HISTORY_LIMIT=40;let history=[],cursor=-1,savedSong='',selectedSection=0;
+ function snapshot(){return JSON.stringify({song,variation,progression:$('composeProgress').value});}
+ function updateHistory(){
+   $('composeUndo').disabled=exporting||cursor<=0;
+   $('composeRedo').disabled=exporting||cursor>=history.length-1;
+ }
+ function changed(){
+   const next=snapshot();
+   if(history[cursor]!==next){history.splice(cursor+1);history.push(next);if(history.length>HISTORY_LIMIT+1)history.shift();cursor=history.length-1;}
+   dirty=JSON.stringify(song)!==savedSong;updateHistory();
+ }
+ function resetHistory(){history=[snapshot()];cursor=0;savedSong=JSON.stringify(song);dirty=false;updateHistory();}
+ function restore(delta){
+   if(exporting||cursor+delta<0||cursor+delta>=history.length)return;
+   EK1.stopComposition();cursor+=delta;
+   const state=JSON.parse(history[cursor]);song=state.song;variation=state.variation;
+   $('composeKey').value=String(song.key);$('composeStyle').value=song.style;$('composeProgress').value=state.progression;
+   if([4,8,16].includes(song.bars.length))$('composeBars').value=String(song.bars.length);
+   dirty=JSON.stringify(song)!==savedSong;rebuild();report(delta<0?'Edit undone.':'Edit restored.');
+ }
+ function sections(){
+   const list=[];
+   song.bars.forEach((b,i)=>{if(i===0||b.section)list.push({start:i,label:b.section||'Song'});});
+   return list.map((v,i)=>({...v,end:list[i+1]?.start??song.bars.length}));
+ }
+ function renderSections(){
+   const list=sections();selectedSection=Math.min(selectedSection,list.length-1);
+   const overview=$('composeSections');overview.replaceChildren();
+   list.forEach((section,i)=>{
+     const button=document.createElement('button');button.type='button';button.className='section-chip';
+     button.textContent=section.label+' - '+(section.end-section.start)+' bars';
+     button.setAttribute('aria-pressed',String(i===selectedSection));
+     button.setAttribute('aria-label',section.label+', bars '+(section.start+1)+' to '+section.end);
+     button.addEventListener('click',()=>{
+       selectedSection=i;
+       [...overview.children].forEach((el,j)=>el.setAttribute('aria-pressed',String(j===i)));
+       $('composeDuplicate').disabled=exporting||song.bars.length+section.end-section.start>64;
+       const row=$('composeRows').children[section.start];
+       if(row){document.querySelector('.compose-editor').open=true;row.scrollIntoView({block:'nearest',behavior:'auto'});}
+     });overview.append(button);
+   });
+   const section=list[selectedSection];
+   $('composeDuplicate').disabled=exporting||!section||song.bars.length+section.end-section.start>64;
+   $('composeLengthReadout').textContent=song.bars.length+' bars';
+ }
+ $('composeUndo').addEventListener('click',()=>restore(-1));
+ $('composeRedo').addEventListener('click',()=>restore(1));
  const cleanMelody=m=>{let sounding=false;for(let i=0;i<m.length;i++){if(m[i]===-1&&!sounding)m[i]=null;if(m[i]!==-1)sounding=m[i]!==null;}return m;};
  const download=(blob,name)=>{const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);};
  function report(s){$('composeStatus').textContent=s;}
@@ -17,6 +65,7 @@
  function rebuild(){
    $('composeTempo').value=song.bpm;
    $('composeFeel').value=song.feel??'Original';
+   renderSections();updateHistory();
    const rows=$('composeRows');rows.replaceChildren();
    song.bars.forEach((bar,i)=>{
      const tr=document.createElement('tr'),number=document.createElement('th');number.scope='row';number.textContent=String(i+1).padStart(2,'0');if(bar.section){const label=document.createElement('span');label.className='section-bar';label.textContent=bar.section;number.append(label);}tr.append(number);
@@ -42,15 +91,16 @@
      const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=part.enabled;check.id='composeTrack'+i;
      check.addEventListener('change',()=>{part.enabled=check.checked;changed();report('Parts updated for the next playback or export.');});label.append(check,' '+part.name);row.append(label);
      if(part.program!==null){const select=document.createElement('select');select.setAttribute('aria-label',part.name+' instrument');select.replaceChildren(...C.programs.map(([p,n])=>opt(n,p)));select.value=String(part.program);select.addEventListener('change',()=>{part.program=Number(select.value);changed();});row.append(select);}else{const span=document.createElement('span');span.textContent='Rhythm kit';row.append(span);}
-     for(const [key,title,min,max,def] of [['volume','Level',0,127,100],['pan','Pan',0,127,64]]){const lab=document.createElement('label');lab.className='mix-control';const range=document.createElement('input');range.type='range';range.min=min;range.max=max;range.value=part[key]??def;range.setAttribute('aria-label',part.name+' '+title);const value=document.createElement('span');const display=()=>{value.textContent=key==='volume'?Math.round(range.value/127*100)+'%':Number(range.value)===64?'C':Number(range.value)<64?'L'+(64-range.value):'R'+(range.value-64);};display();range.addEventListener('input',()=>{part[key]=Number(range.value);changed();display();});lab.append(title,range,value);row.append(lab);}
+     for(const [key,title,min,max,def] of [['volume','Level',0,127,100],['pan','Pan',0,127,64]]){const lab=document.createElement('label');lab.className='mix-control';const range=document.createElement('input');range.type='range';range.min=min;range.max=max;range.value=part[key]??def;range.setAttribute('aria-label',part.name+' '+title);const value=document.createElement('span');const display=()=>{value.textContent=key==='volume'?Math.round(range.value/127*100)+'%':Number(range.value)===64?'C':Number(range.value)<64?'L'+(64-range.value):'R'+(range.value-64);};display();range.addEventListener('input',()=>{part[key]=Number(range.value);dirty=JSON.stringify(song)!==savedSong;display();});range.addEventListener('change',changed);lab.append(title,range,value);row.append(lab);}
      tracks.append(row);
    });
  }
- function settings(){const bpm=Number($('composeTempo').value);if(!Number.isFinite(bpm)||bpm<60||bpm>180)throw Error('Tempo must be 60–180 BPM.');const nextStyle=$('composeStyle').value,feel=$('composeFeel').value;if(song.bpm!==Math.round(bpm)||song.style!==nextStyle||(song.feel??'Original')!==feel)changed();song.bpm=Math.round(bpm);song.style=nextStyle;song.feel=feel;}
- $('composeTempo').addEventListener('change',changed);
- $('composeFeel').addEventListener('change',()=>{changed();report('Feel updated for the next playback or export.');});
- $('composeStyle').addEventListener('change',()=>{$('composeTempo').value=C.styles[$('composeStyle').value].bpm;});
- $('composeGenerate').addEventListener('click',()=>{if(dirty&&!confirm('Replace your unsaved arrangement? Save a project first to keep it.'))return;EK1.stopComposition();song=C.create(Number($('composeKey').value),$('composeProgress').value,Number($('composeBars').value),$('composeStyle').value,$('composeFeel').value);song.bars[0].section='Verse';variation=0;dirty=false;rebuild();report('New arrangement ready. Edit chords or melody, or press PLAY SONG.');});
+ function settings(){const bpm=Number($('composeTempo').value);if(!Number.isFinite(bpm)||bpm<60||bpm>180)throw Error('Tempo must be 60–180 BPM.');const nextStyle=$('composeStyle').value,feel=$('composeFeel').value;const altered=song.bpm!==Math.round(bpm)||song.style!==nextStyle||(song.feel??'Original')!==feel;song.bpm=Math.round(bpm);song.style=nextStyle;song.feel=feel;if(altered)changed();}
+ function updateSettings(){try{settings();}catch(e){report(e.message);}}
+ $('composeTempo').addEventListener('change',updateSettings);
+ $('composeFeel').addEventListener('change',()=>{updateSettings();report('Feel updated for the next playback or export.');});
+ $('composeStyle').addEventListener('change',()=>{$('composeTempo').value=C.styles[$('composeStyle').value].bpm;updateSettings();});
+ $('composeGenerate').addEventListener('click',()=>{if(dirty&&!confirm('Replace your unsaved arrangement? Save a project first to keep it.'))return;EK1.stopComposition();song=C.create(Number($('composeKey').value),$('composeProgress').value,Number($('composeBars').value),$('composeStyle').value,$('composeFeel').value);song.bars[0].section='Verse';variation=0;selectedSection=0;changed();rebuild();report('New arrangement ready. Edit chords or melody, or press PLAY SONG.');});
  function regenerateMelody(){
    C.melodyFor(song.bars,++variation,song.style,song.key,song.feel).forEach((m,i)=>{
      const size=Math.max(song.bars[i].melody.length,m.length),next=Array(size).fill(null);
@@ -74,14 +124,7 @@
    }catch(e){report(e.message);}
  });
  // This is navigation, not browser zoom. Keep the option session-local.
- function returnToKeyboard(){
-   if(!$('composeReturn').checked)return;
-   const instrument=document.querySelector('.instrument'),keys=document.querySelector('.keyboard-scroll');
-   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-   const target=instrument.getBoundingClientRect().height>window.innerHeight?keys:instrument;
-   target.scrollIntoView({block:target===keys?'center':'start',behavior:reduced?'auto':'smooth'});
-   keys.focus({preventScroll:true});
- }
+ function returnToKeyboard(){if($('composeReturn').checked)EK1.returnToKeyboard();}
  $('composePlay').addEventListener('click',async()=>{try{if(EK1.state.composing){EK1.stopComposition();return;}settings();const bytes=C.encode(song);await EK1.playComposition(bytes);report('Playing your song. Play along on the keyboard.');if(EK1.state.composing)returnToKeyboard();}catch(e){report(e.message);}});
  $('composeSave').addEventListener('click',()=>{try{settings();EK1.downloadComposition(C.encode(song));report('Song exported as multitrack MIDI.');}catch(e){report(e.message);}});
  // Strict validation prevents malformed project files from replacing a working song.
@@ -96,16 +139,26 @@
    for(let i=0;i<4;i++){const t=x.parts[i];if(!t||t.name!==defaults[i].name||t.channel!==defaults[i].channel||typeof t.enabled!=='boolean'||!integer(t.volume??100,0,127)||!integer(t.pan??64,0,127)||(i===3?t.program!==null:!C.programs.some(([n])=>n===t.program)))throw Error('Invalid project track settings.');}
    return x;
  }
- $('projectSave').addEventListener('click',()=>{try{settings();download(new Blob([JSON.stringify({format:'EK-1',version:1,song,bank:EK1.bankName,progression:$('composeProgress').value},null,2)],{type:'application/json'}),'EK-1-song.ek1');dirty=false;report('Editable project saved. SoundFont remains a separate file.');}catch(e){report(e.message);}});
+ $('projectSave').addEventListener('click',()=>{try{settings();download(new Blob([JSON.stringify({format:'EK-1',version:1,song,bank:EK1.bankName,progression:$('composeProgress').value},null,2)],{type:'application/json'}),'EK-1-song.ek1');savedSong=JSON.stringify(song);dirty=false;report('Editable project saved. SoundFont remains a separate file.');}catch(e){report(e.message);}});
  $('projectOpen').addEventListener('click',()=>$('projectFile').click());
- $('projectFile').addEventListener('change',async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;try{if(file.size>1048576)throw Error('Project file exceeds 1 MiB.');const p=JSON.parse(await file.text()),next=validateProject(p);if(dirty&&!confirm('Replace your unsaved arrangement?'))return;EK1.stopComposition();song=next;dirty=false;variation=0;$('composeKey').value=String(song.key);$('composeStyle').value=song.style;$('composeProgress').value=Object.hasOwn(C.progressions,p.progression)?p.progression:'Bright';if([4,8,16].includes(song.bars.length))$('composeBars').value=String(song.bars.length);rebuild();report('Project opened.'+(p.bank&&p.bank!==EK1.bankName?' Load '+String(p.bank).slice(0,200)+' for the original sound.':''));}catch(e){report('Could not open project: '+e.message);}});
- $('appendSection').addEventListener('click',()=>{try{settings();const length=Number($('composeBars').value);if(song.bars.length+length>64)throw Error('Songs are limited to 64 bars.');const next=C.create(song.key,$('composeProgress').value,length,song.style,song.feel??'Original');const label=['Intro','Verse','Chorus','Bridge','Ending'][$('sectionType').selectedIndex];next.bars[0].section=label;song.bars.push(...next.bars);changed();rebuild();report(label+' added. '+song.bars.length+' bars total.');}catch(e){report(e.message);}});
+ $('projectFile').addEventListener('change',async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;try{if(file.size>1048576)throw Error('Project file exceeds 1 MiB.');const p=JSON.parse(await file.text()),next=validateProject(p);if(dirty&&!confirm('Replace your unsaved arrangement?'))return;EK1.stopComposition();song=next;dirty=false;variation=0;$('composeKey').value=String(song.key);$('composeStyle').value=song.style;$('composeProgress').value=Object.hasOwn(C.progressions,p.progression)?p.progression:'Bright';if([4,8,16].includes(song.bars.length))$('composeBars').value=String(song.bars.length);selectedSection=0;resetHistory();rebuild();report('Project opened.'+(p.bank&&p.bank!==EK1.bankName?' Load '+String(p.bank).slice(0,200)+' for the original sound.':''));}catch(e){report('Could not open project: '+e.message);}});
+ $('appendSection').addEventListener('click',()=>{try{settings();const length=Number($('composeBars').value);if(song.bars.length+length>64)throw Error('Songs are limited to 64 bars.');const next=C.create(song.key,$('composeProgress').value,length,song.style,song.feel??'Original');const label=['Intro','Verse','Chorus','Bridge','Ending'][$('sectionType').selectedIndex];next.bars[0].section=label;song.bars.push(...next.bars);selectedSection=sections().length-1;changed();rebuild();report(label+' added. '+song.bars.length+' bars total.');}catch(e){report(e.message);}});
+ $('composeDuplicate').addEventListener('click',()=>{
+   try{settings();const section=sections()[selectedSection];
+     if(!section||song.bars.length+section.end-section.start>64)throw Error('Songs are limited to 64 bars.');
+     EK1.stopComposition();
+     const copy=JSON.parse(JSON.stringify(song.bars.slice(section.start,section.end)));
+     copy[0].section=section.label;
+     song.bars.splice(section.end,0,...copy);selectedSection++;changed();rebuild();
+     report(section.label+' duplicated. '+song.bars.length+' bars total.');
+   }catch(e){report(e.message);}
+ });
  $('removeSection').addEventListener('click',()=>{let i=song.bars.length-1;while(i>=0&&!song.bars[i].section)i--;if(i<=0){report('Keep at least one section.');return;}song.bars.splice(i);changed();rebuild();report('Last section removed. '+song.bars.length+' bars remain.');});
  if(!window.lamejs?.Mp3Encoder){$('audioFormat').querySelector('option[value=mp3]').disabled=true;}
  $('audioFormat').addEventListener('change',()=>{const mp3=$('audioFormat').value==='mp3';$('wavBitsLabel').hidden=mp3;$('mp3RateLabel').hidden=!mp3;});
- $('exportAudio').addEventListener('click',async()=>{if(exporting)return;exporting=true;const controls=[...document.querySelectorAll('.song-builder button,.song-builder select,.song-builder input')];const old=controls.map(x=>x.disabled);controls.forEach(x=>x.disabled=true);const cancel=$('cancelExport');cancel.hidden=false;cancel.disabled=false;const controller=new AbortController();cancel.onclick=()=>controller.abort();const progress=$('audioProgress');progress.hidden=false;progress.value=0;try{settings();const rate=Number($('audioRate').value),format=$('audioFormat').value,bitrate=Number($('mp3Rate').value),bits=Number($('audioBits').value);if(format==='mp3'&&!await EK1AudioExport.mp3Supported(rate,bitrate))throw Error('MP3 encoder is unavailable. Extract the entire ZIP or choose WAV.');report('Rendering '+(EK1.bankName||'Classic sounds')+' locally…');const audio=await EK1.renderComposition(C.encode(song),rate,p=>progress.value=p,controller.signal);const blob=format==='wav'?EK1AudioExport.wav(audio,bits):await EK1AudioExport.mp3(audio,bitrate,p=>progress.value=p,controller.signal);if(controller.signal.aborted)throw Error('Export cancelled.');download(blob,'EK-1-song.'+format);progress.value=1;report('Audio exported as '+format.toUpperCase()+'.');}catch(e){report(controller.signal.aborted?'Export cancelled. No audio file was created.':'Could not export audio: '+e.message);}finally{exporting=false;controls.forEach((x,i)=>x.disabled=old[i]);progress.hidden=true;cancel.hidden=true;cancel.onclick=null;document.dispatchEvent(new Event('ek1-transport'));}});
+ $('exportAudio').addEventListener('click',async()=>{if(exporting)return;exporting=true;const controls=[...document.querySelectorAll('.song-builder button,.song-builder select,.song-builder input')];const old=controls.map(x=>x.disabled);controls.forEach(x=>x.disabled=true);const cancel=$('cancelExport');cancel.hidden=false;cancel.disabled=false;const controller=new AbortController();cancel.onclick=()=>controller.abort();const progress=$('audioProgress');progress.hidden=false;progress.value=0;try{settings();const rate=Number($('audioRate').value),format=$('audioFormat').value,bitrate=Number($('mp3Rate').value),bits=Number($('audioBits').value);if(format==='mp3'&&!await EK1AudioExport.mp3Supported(rate,bitrate))throw Error('MP3 encoder is unavailable. Extract the entire ZIP or choose WAV.');report('Rendering '+(EK1.bankName||'Classic sounds')+' locally…');const audio=await EK1.renderComposition(C.encode(song),rate,p=>progress.value=p,controller.signal);const blob=format==='wav'?EK1AudioExport.wav(audio,bits):await EK1AudioExport.mp3(audio,bitrate,p=>progress.value=p,controller.signal);if(controller.signal.aborted)throw Error('Export cancelled.');download(blob,'EK-1-song.'+format);progress.value=1;report('Audio exported as '+format.toUpperCase()+'.');}catch(e){report(controller.signal.aborted?'Export cancelled. No audio file was created.':'Could not export audio: '+e.message);}finally{exporting=false;controls.forEach((x,i)=>x.disabled=old[i]);progress.hidden=true;cancel.hidden=true;cancel.onclick=null;updateHistory();renderSections();document.dispatchEvent(new Event('ek1-transport'));}});
  window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
  song.bars[0].section='Verse';
- rebuild();
+ resetHistory();rebuild();
  document.addEventListener('ek1-transport',()=>{$('composePlay').textContent=EK1.state.composing?'STOP SONG':'PLAY SONG';$('composePlay').disabled=exporting||EK1.state.recording||EK1.state.bankLoading;});
 })();

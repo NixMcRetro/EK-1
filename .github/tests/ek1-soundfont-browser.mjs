@@ -18,17 +18,22 @@ try{
  assert.equal(await page.evaluate(()=>EK1.state.engine),'soundfont');
  assert.equal(await page.locator('#tone option').count(),21);
  await page.locator('#tone').selectOption('sf-0');
+ await page.locator('#favouriteVoice').click();
+ assert.equal(await page.locator('#favouriteList option').count(),2);
+ await page.locator('#tone').selectOption('0');await page.locator('#favouriteList').selectOption('sf-0');
+ assert.equal(await page.evaluate(()=>EK1.state.engine),'soundfont');
  await page.locator('#keys [data-midi="69"]').focus();
  await page.keyboard.down('z');
  await page.waitForFunction(()=>EK1.state.sampleVoices>0);
  await page.keyboard.up('z');
- const bytes=EK1MIDI.encodeTake([{midi:69,t:0,length:2,tone:0}]);
+ const bytes=EK1MIDI.encodeTake([{midi:69,t:0,length:1,tone:0},{midi:69,t:0,length:2,tone:10}]);
  await page.locator('#midiFile').setInputFiles({name:'test.mid',mimeType:'audio/midi',buffer:Buffer.from(bytes)});
- await page.waitForFunction(()=>EK1.state.midiNotes===1);
+ await page.waitForFunction(()=>EK1.state.midiNotes===2);
  await page.locator('#tone').selectOption('fm-2');
  assert.equal(await page.evaluate(()=>EK1.state.engine),'fm');
  assert(await page.evaluate(()=>EK1.state.soundfont),'Bank must stay loaded in FM mode');
- // All five demos must use the sample engine independently of the live FM voice.
+ // Original demo mode retains the authored sampled lead while FM is selected.
+ await page.locator('#demoFollow').uncheck();
  for(let i=0;i<5;i++){
    const score=await page.evaluate(i=>EK1.demoArrangement(i),i);
    assert.deepEqual(score.channels,[0,1,2,9]);
@@ -57,14 +62,27 @@ try{
  await page.waitForFunction(()=>EK1.state.sampleKeys===0);
  await page.locator('#playMidi').click();
  await page.waitForFunction(()=>EK1.state.transport==='midi'&&EK1.state.sampleVoices>0);
+ await page.waitForFunction(()=>document.querySelector('[data-midi="69"]').dataset.channels?.split(',').length===2);
+ await page.waitForFunction(()=>document.querySelector('[data-midi="69"]').dataset.channels?.split(',').length===1);
  await page.locator('#stop').click();
+ assert.equal(await page.locator('.channel-lit').count(),0);
  await page.waitForFunction(()=>EK1.state.sampleVoices===0&&EK1.state.sampleKeys===0);
  await page.locator('#tone').selectOption('sf-0');
  assert.equal(await page.evaluate(()=>EK1.state.engine),'soundfont');
  await page.locator('#bankFile').setInputFiles({name:'broken.sf2',mimeType:'application/octet-stream',buffer:Buffer.from([1,2,3])});
  await page.waitForFunction(()=>document.querySelector('#bankStatus').textContent.includes('Could not open'));
  assert(await page.evaluate(()=>EK1.state.soundfont));
+ const sampled=await page.evaluate(async()=>{
+  const bytes=EK1Composer.encode(EK1Composer.create(0,'Bright',4,'Ska','Natural'));
+  const dry=await EK1.renderComposition(bytes,44100,()=>{});
+  const slider=document.querySelector('#effect-reverb');slider.value='100';slider.dispatchEvent(new Event('input',{bubbles:true}));
+  const wet=await EK1.renderComposition(bytes,44100,()=>{});
+  let peak=0,diff=0;for(let i=0;i<wet.left.length;i++){peak=Math.max(peak,Math.abs(wet.left[i]),Math.abs(wet.right[i]));diff+=Math.abs(wet.left[i]-dry.left[i]);}
+  return {peak,diff,length:wet.left.length};
+ });
+ assert(sampled.peak>0&&sampled.peak<=.3501&&sampled.diff>0,'sampled effects export: '+JSON.stringify(sampled));
  await page.locator('#closeBank').click();
+ assert.equal(await page.locator('#favouriteList option').count(),1);
  assert.equal(await page.evaluate(()=>EK1.state.soundfont),false);
  assert.equal(await page.evaluate(()=>EK1.state.engine),'classic');
  assert.equal(await page.locator('#tone option').count(),20);

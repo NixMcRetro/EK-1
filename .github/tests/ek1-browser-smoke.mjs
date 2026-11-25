@@ -1,4 +1,4 @@
-// Electronic Keyboard (Model EK-1) v0.9.3 browser regression.
+// Electronic Keyboard (Model EK-1) v1.0.0 browser regression.
 // Run with: node .github/tests/ek1-browser-smoke.mjs
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
@@ -10,7 +10,7 @@ import {chromium, firefox, webkit} from 'playwright';
 const url = pathToFileURL(resolve('index.html')).href;
 mkdirSync('artifacts', {recursive:true});
 for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
-  const browser = await browserType.launch({headless:true});
+  const browser = await browserType.launch({headless:true,...(name==='firefox'?{firefoxUserPrefs:{'media.autoplay.default':0,'media.autoplay.blocking_policy':0}}:{})});
   try {
     for (const width of (name === 'chromium' ? [1280, 390] : [1024])) {
       const page = await browser.newPage({viewport:{width, height:860}});
@@ -18,7 +18,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(url, {waitUntil:'load'});
       await page.waitForFunction(() => !!window.EK1);
-      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.9\.3/);
+      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v1\.0\.0/);
       const info = await page.evaluate(() => ({
         version: EK1.version,
         tones: EK1.tones,
@@ -27,7 +27,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         bars: Array.from({length:EK1.demos}, (_,i) => EK1.demoBars(i)),
         events: Array.from({length:EK1.demos}, (_,i) => EK1.demoEvents(i))
       }));
-      assert.equal(info.version, '0.9.3');
+      assert.equal(info.version, '1.0.0');
       assert.deepEqual([info.tones,info.rhythms,info.demos], [12,6,5]);
       assert.deepEqual(info.bars, [16,16,16,16,16]);
       for (const [i,events] of info.events.entries()) {
@@ -40,6 +40,27 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       assert.equal(await page.locator('.printed-bank').count(), 2);
       assert.equal(await page.locator('.instrument .control-group').count(), 3);
       assert.equal(await page.locator('#keys .key').count(), 49);
+      assert.equal(await page.locator('#sharpLabels .rail-note').count(),20);
+      assert.equal(await page.locator('#naturalLabels .rail-note').count(),29);
+      assert.equal(await page.locator('#naturalLabels [data-note="60"]').innerText(),'C4');
+      assert.equal(await page.locator('#sharpLabels [data-note="61"]').innerText(),'C#4');
+      assert.equal(await page.locator('details[open]').count(),5);
+      const alignment=await page.evaluate(()=>[48,49,60,61,72,73,96].map(n=>{
+        const rail=document.querySelector('[data-note="'+n+'"]').getBoundingClientRect();
+        const key=document.querySelector('#keys [data-midi="'+n+'"]').getBoundingClientRect();
+        return Math.abs(rail.left+rail.width/2-key.left-key.width/2);
+      }));
+      assert(alignment.every(n=>n<2),'Rail label alignment: '+alignment);
+      assert(!(await page.locator('body').innerText()).includes('·'));
+      await page.locator('.keyboard-scroll').focus();
+      await page.keyboard.press(',');assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),-1);
+      assert.equal(await page.locator('[data-midi="48"] .shortcut').innerText(),'B');
+      await page.keyboard.press('.');assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),0);
+      await page.keyboard.press('.');assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),1);
+      assert.equal(await page.locator('[data-midi="65"] .shortcut').innerText(),'Z');
+      await page.keyboard.press('.');assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),1);
+      await page.locator('#octaveDown').click();assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),0);
+      assert.equal(await page.locator('[data-midi="57"] .shortcut').innerText(),'C');assert.equal(await page.locator('[data-midi="59"] .shortcut').innerText(),'V');assert.equal(await page.locator('[data-midi="60"] .shortcut').innerText(),'B');
       assert.equal(await page.locator('#keys .key.white').count(), 29);
       assert.equal(await page.locator('#keys .key.black').count(), 20);
       assert.equal(await page.locator('#tone option').count(), 20);
@@ -64,7 +85,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         assert(clippedKeys <= 2, 'All 49 keys should fit a wide desktop screen');
       }
       // Capture desktop/mobile appearances for human review of the physical design.
-      await page.screenshot({path: 'artifacts/ek1-v0.9.3-' + name + '-' + width + '.png', fullPage:true});
+      await page.screenshot({path: 'artifacts/ek1-v1.0.0-' + name + '-' + width + '.png', fullPage:true});
       await page.locator('#tone').selectOption('5');
       assert.match(await page.locator('#displayMain').textContent(),/TRUMPET/);
       await page.locator('#playDemo').click();
@@ -110,18 +131,26 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       assert.equal(recorded.notes[0].program,56);
       await page.locator('#clearTake').click();
       assert.equal(await page.evaluate(() => EK1.state.takeNotes), 0);
-      const bytes=EK1MIDI.encodeTake([{midi:60,t:0,length:1,tone:0},{midi:48,t:0,length:1,tone:10}]);
+      const bytes=EK1MIDI.encodeTake([{midi:60,t:0,length:1.2,tone:0},{midi:60,t:0,length:2.2,tone:10}]);
       await page.locator('#midiFile').setInputFiles({name:'test-song.mid',mimeType:'audio/midi',buffer:Buffer.from(bytes)});
       await page.waitForFunction(()=>EK1.state.midiNotes===2);
       assert.equal(await page.evaluate(()=>EK1.state.midiChannels),2);
       assert.match(await page.locator('#midiStatus').innerText(),/2 notes/);
       await page.locator('#playMidi').click();
       await page.waitForFunction(()=>EK1.state.transport==='midi');
+      assert.equal(await page.locator('#midiLegend .channel-swatch').count(),2);
+      // Some headless browser runs have no advancing real-time audio clock.
+      const clock=await page.evaluate(()=>EK1.state.audioTime);await page.waitForTimeout(250);
+      if(await page.evaluate(t=>EK1.state.audioTime>t+.05,clock)){
+        await page.waitForFunction(()=>document.querySelector('[data-midi="60"]').dataset.channels?.split(',').length===2);
+        await page.waitForFunction(()=>document.querySelector('[data-midi="60"]').dataset.channels?.split(',').length===1);
+      }else{assert.notEqual(name,'chromium','Chromium must measure live MIDI lights');console.log('No live audio clock in '+name+'; MIDI legend checked, overlap verified in Chromium');}
       await page.keyboard.down('q');
-      await page.waitForFunction(()=>document.querySelector('[data-midi="72"]').classList.contains('pressed'));
+      await page.waitForFunction(()=>document.querySelector('[data-midi="65"]').classList.contains('pressed'));
       await page.keyboard.up('q');
       await page.locator('#stop').click();
       assert.equal(await page.evaluate(()=>EK1.state.transport),'stopped');
+      assert.equal(await page.locator('.channel-lit').count(),0);
       const copyDownload=page.waitForEvent('download');
       await page.locator('#saveMidi').click();
       const copy=await copyDownload;

@@ -2,6 +2,59 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [1.0.0] - First stable release
+
+- First stable offline release of Electronic Keyboard (Model EK-1), consolidating the keyboard, SoundFont library, MIDI player, Song Builder, and appearance preferences.
+- Increase startup volume to 50%, retaining all existing engine trims, headroom, compression, and the maximum digital peak ceiling.
+- Reorganise the README and quick-start documentation for new users.
+- Package the verified offline ZIP and SHA-256 checksum for GitHub Releases.
+
+## [0.9.10] - Remembered layout and dark mode
+
+- All five disclosure panels start expanded, with independently remembered open/closed states where local browser storage is available.
+- Compact Appearance selector with System, Light and Dark modes; the instrument faceplate and key colours remain unchanged.
+- No audio, file, project or volume data is persisted. Storage failure falls back to session-only preferences.
+
+## [0.9.9] - MIDI repeat and SoundFont prominence
+
+- Imported MIDI repeats by default, with an optional loop checkbox; song notes and controllers reset between passes.
+- PLAY MIDI returns to the keyboard by default, with an opt-out. Song Builder shares the same navigation helper.
+- Move Sound Library / SoundFonts directly below the instrument, before the other utility sections.
+- Place MIDI Songs before Song Builder.
+
+## [0.9.8] - MIDI voice override and layout consistency
+
+- Optional live MIDI voice override for all melodic channels or one selected channel; original MIDI remains the default.
+- Consistent left-aligned utility sections, control sizing, typography and spacing; mixer, note editor, project/audio and sound options remain collapsed by default.
+- Keep primary playback and generation controls visible in Song Builder; preserve the existing instrument faceplate and licence links.
+
+## [0.9.7] - Demo audio headroom
+
+- Increase linear headroom before the emergency digital peak limiter; preserve the 25% startup volume and 0.35 maximum sample ceiling.
+- Rebalance demo lead and accompaniment, soften percussion attacks, and use a 2048-frame SoundFont buffer to reduce underrun risk.
+- Replace individual note-light timers with a shared audio-clock scheduler.
+- Dry sampled exports use downward-only linear gain rather than per-sample saturation.
+
+## [0.9.6] - Middle C mapping and playback controls
+
+- Two-row F3-E5 computer keyboard mapping, with A3/B3/C4 on C/V/B and octave shifting.
+- Optional demo lead follows the selected voice (default on); original backing stays intact.
+- Shared audio-clock pause/resume for all playback types; light and completion timers follow the audio clock.
+
+## [0.9.5] - Keyboard labels and play-along usability
+
+- Start with all expandable panels collapsed; printed labels for all 49 keys.
+- Comma/period and octave buttons shift computer keyboard shortcuts without transposing MIDI or on-screen keys.
+- MIDI channel colours, split highlights for overlapping channels, and channel legend.
+- Replace middle-dot separators with hyphens.
+
+## [0.9.4] - Compact instrument polish
+
+- Bounded undo/redo history and compact song structure navigation, with section duplication.
+- Collapsible chord and melody editor; no extra faceplate controls.
+- Optional session-local instrument favourites, room reverb and chorus in Sound options.
+- Effects are off by default, pass through the existing protected output stage and can be included in WAV/MP3 exports.
+
 ## [0.9.3] - Output level protection and Song Builder navigation
 
 - Lower 25% startup volume, visible percentage, conservative engine trims, shared compressor and bounded output stage.

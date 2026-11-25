@@ -1,13 +1,16 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v0.9.3. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v1.0.0. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.9.3';
+  const VERSION = '1.0.0';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-  const SHORTCUTS = ['z','s','x','d','c','v','g','b','h','n','j','m','q','2','w','3','e','r','5','t','6','y','7','u'];
+  const CHANNEL_COLORS=['#e6af42','#6db4e4','#e68275','#9dc66e','#b6a0e3','#65c4b8','#e7a1c2','#c6bd76','#e69a51','#a3a9b1','#79a5ee','#dba5ec','#83c997','#dc8caa','#91b9ba','#d1a979'];
+  let keyboardOctave=0;
+  const SHORTCUT_BASE=53;
+  const SHORTCUTS=['z','s','x','d','c','f','v','b','h','n','j','m','q','2','w','3','e','4','r','t','6','y','7','u'];
   const TONES = [
     { name: 'Grand Piano', wave: 'triangle', harmonics: [1, .22, .08], attack: .006, release: .25, cutoff: 4200 },
     { name: 'Electric Piano', wave: 'sine', harmonics: [1, .45, .12], attack: .006, release: .33, cutoff: 5900 },
@@ -106,13 +109,16 @@
     }
   ];
   let ctx, master, outputStage, outputMeter, noise, transport = null, loop = null, endTimer = null, transportGeneration = 0;
+  let paused=false,pauseBusy=false,pauseDisplay=null,followDemoVoice=true,midiOverride='original';
   let tone = 0, rhythm = 0, tempo = 116, volume = EK1Levels.DEFAULT_VOLUME, melodyOff = false, autoChord = false;
   let heldChord = null, recording = false, take = [], takeStart = 0, recordTimer = null;
   let importedMidi = null, midiName = '', importRequest = 0;
   let bank = null, bankLoading = false, bankFileRef = null;
   let engine='classic', fmIndex=0, bankVoiceIndex=0, bankGeneration=0;
+  const effects={reverb:0,chorus:0},favourites=new Map();
   const fmSettings={brightness:1,attack:1,release:1};
-  const held = new Map(), pending = new Set(), cancelled = new Set(), lights = new Map(), timers = new Set(), keyElements = new Map();
+  const held = new Map(), pending = new Set(), cancelled = new Set(), lights = new Map(), keyElements = new Map();
+  let lampLoop=null;const lampQueue=[];
   const noteToMidi = s => {
     const m = /^([A-G])([#b]?)(-?[0-9]+)$/.exec(s);
     if (!m) throw new Error('Invalid note: ' + s);
@@ -165,14 +171,14 @@
       const tone=song.sections?song.sections[Math.floor(n.step/64)%song.sections.length]:song.lead;
       add(0,n.midi,n.step,n.length*.91,tone,100);
     }
-    for(const [channel,level,pan] of [[0,105,64],[1,75,53],[2,90,64],[9,87,64]])controls.push({time:0,channel,control:7,value:level},{time:0,channel,control:10,value:pan});
+    for(const [channel,level,pan] of [[0,84,64],[1,62,53],[2,73,64],[9,70,64]])controls.push({time:0,channel,control:7,value:level},{time:0,channel,control:10,value:pan});
     notes.sort((a,b)=>a.time-b.time||a.channel-b.channel);
     return {notes,controls,channels:[0,1,2,9],duration:song.bars*4*beat};
   }
   function demoIndex(tr=transport){return tr?.type==='demo'?(tr.demoIndex??tr.song):null;}
   function demoDisplay(tr,bar){
     const index=demoIndex(tr),song=SONGS[index];
-    show(String(index+1).padStart(2,'0')+' '+song.title.toUpperCase(),'DEMO • '+(tr.sampleBank?'SF':'CLASSIC')+' • BAR '+bar+'/'+song.bars+(melodyOff?' • MELODY OFF':''));
+    show(String(index+1).padStart(2,'0')+' '+song.title.toUpperCase(),'DEMO - '+(tr.sampleBank?'SF':'CLASSIC')+' - BAR '+bar+'/'+song.bars+(melodyOff?' - MELODY OFF':''));
   }
   async function audio() {
     if (!ctx) {
@@ -180,17 +186,17 @@
       if (!Audio) { show('AUDIO NOT SUPPORTED', 'Use a browser with Web Audio'); return false; }
       ctx = new Audio();
       outputMeter=ctx.createAnalyser();outputMeter.fftSize=2048;outputMeter.connect(ctx.destination);
-      outputStage=EK1Levels.create(ctx,outputMeter,volume);
+      outputStage=EK1Levels.create(ctx,outputMeter,volume,effects);
       master=outputStage.input;
       noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const data = noise.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
     }
-    if (ctx.state !== 'running') {
+    if (!paused && ctx.state !== 'running') {
       // Firefox can leave resume() pending under autoplay rules. Do not deadlock UI.
       ctx.resume().catch(() => show('AUDIO BLOCKED', 'ALLOW SOUND IN YOUR BROWSER'));
       setTimeout(() => {
-        if (ctx && ctx.state !== 'running') show('AUDIO BLOCKED', 'CLICK A KEY OR ALLOW SOUND');
+        if (ctx && !paused && ctx.state !== 'running') show('AUDIO BLOCKED', 'CLICK A KEY OR ALLOW SOUND');
       }, 900);
     }
     return true;
@@ -202,7 +208,9 @@
   function reflectButtons() {
     $('playDemo').textContent = transport?.type === 'demo' ? 'DEMO ■' : 'DEMO';
     $('playDemo').disabled = bankLoading || recording;
-    $('demoSound').textContent = bank ? 'Demo playback: SoundFont' : 'Demo playback: Classic';
+    $('pause').disabled=!transport||recording||bankLoading||pauseBusy;
+    $('pause').textContent=paused?'RESUME ▶':'PAUSE Ⅱ';$('pause').setAttribute('aria-pressed',String(paused));
+    $('demoSound').textContent='Demo backing: '+(bank?'SoundFont':'Classic')+' - Lead: '+(followDemoVoice?voiceLabel():'Original');
     $('startRhythm').textContent = transport?.type === 'rhythm' ? 'PLAYING' : 'START';
     $('record').textContent = recording ? '■ STOP REC' : '● REC';
     $('record').setAttribute('aria-pressed', String(recording));
@@ -218,6 +226,7 @@
     $('openBank').disabled = bankLoading || recording || !!window.EK1Standalone;
     $('closeBank').disabled = !bank || bankLoading || recording;
     $('tone').disabled = recording || bankLoading;
+    refreshFavourites();
     $('activeEngine').textContent = engine==='soundfont'?'SOUNDFONT':engine==='fm'?'FM':'CLASSIC';
     $('fmPanel').hidden = engine!=='fm';
     for(const id of ['fmBrightness','fmAttack','fmRelease','fmReset'])$(id).disabled=engine!=='fm'||recording||bankLoading;
@@ -277,7 +286,7 @@
       o.type = 'sine';
       o.frequency.setValueAtTime(155, time);
       o.frequency.exponentialRampToValueAtTime(47, time + .13);
-      g.gain.setValueAtTime(strength * .75, time);
+      g.gain.setValueAtTime(.001,time);g.gain.linearRampToValueAtTime(strength*.75,time+.003);
       g.gain.exponentialRampToValueAtTime(.001, time + .23);
       o.connect(g).connect(bus); o.onended=()=>{o.disconnect();g.disconnect();}; o.start(time); o.stop(time + .25);
       return;
@@ -286,7 +295,7 @@
     src.buffer = noise;
     f.type = 'highpass';
     f.frequency.value = kind === 'snare' ? 1300 : 5200;
-    g.gain.setValueAtTime(strength * (kind === 'snare' ? .45 : .16), time);
+    g.gain.setValueAtTime(.001,time);g.gain.linearRampToValueAtTime(strength*(kind==='snare'?.45:.16),time+.002);
     g.gain.exponentialRampToValueAtTime(.001, time + (kind === 'snare' ? .16 : .045));
     src.connect(f).connect(g).connect(bus); src.onended=()=>{src.disconnect();f.disconnect();g.disconnect();};
     src.start(time); src.stop(time + (kind === 'snare' ? .18 : .06));
@@ -311,48 +320,113 @@
     }
     return root;
   }
-  function lamp(midi, at, duration) {
-    const node = keyElements.get(midi);
-    if (!node) return;
-    const ms = Math.max(0, Math.round((at - ctx.currentTime) * 1000));
-    const on = setTimeout(() => {
-      timers.delete(on);
-      if (!node.isConnected) return;
-      lights.set(midi, (lights.get(midi) || 0) + 1);
-      node.classList.add('lit');
-      const off = setTimeout(() => {
-        timers.delete(off);
-        const remain = (lights.get(midi) || 1) - 1;
-        if (remain > 0) lights.set(midi, remain);
-        else { lights.delete(midi); node.classList.remove('lit'); }
-      }, Math.max(80, duration * 1000));
-      timers.add(off);
-    }, ms);
-    timers.add(on);
+  function clockTimer(at,fn){
+    const id=setInterval(()=>{if(paused||!ctx||ctx.currentTime<at)return;clearInterval(id);fn();},25);
+    return id;
   }
-  function clearLamps() {
-    timers.forEach(clearTimeout); timers.clear(); lights.clear();
-    keyElements.forEach(node => node.classList.remove('lit'));
+  async function togglePause(){
+    if(!transport||recording||bankLoading||pauseBusy||!ctx)return;
+    const current=transport;pauseBusy=true;
+    try{
+      if(!paused){
+        stopHeld();bank?.stopLive();pauseDisplay=[$('displayMain').textContent,$('displaySub').textContent];
+        paused=true;reflectButtons();await ctx.suspend();
+        if(transport===current&&paused)show('PAUSED','PRESS RESUME TO CONTINUE');
+      }else{
+        await ctx.resume();
+        if(transport===current){paused=false;if(pauseDisplay)show(...pauseDisplay);pauseDisplay=null;}
+      }
+    }catch(e){paused=ctx.state==='suspended';show('AUDIO PAUSE UNAVAILABLE','PRESS STOP OR RESUME');}
+    finally{pauseBusy=false;reflectButtons();}
+  }
+  function paintLamp(midi){
+    const node=keyElements.get(midi),active=lights.get(midi);
+    if(!node)return;
+    const channels=active?[...active.keys()].filter(c=>c>=0).sort((a,b)=>a-b):[];
+    node.classList.toggle('lit',!!active?.size);
+    node.classList.toggle('channel-lit',channels.length>0);
+    if(channels.length){
+      const stops=channels.flatMap((c,i)=>[CHANNEL_COLORS[c]+' '+(i*100/channels.length)+'%',CHANNEL_COLORS[c]+' '+((i+1)*100/channels.length)+'%']);
+      node.style.setProperty('--channel-fill','linear-gradient(90deg,'+stops.join(',')+')');
+      node.dataset.channels=channels.map(c=>c+1).join(',');
+    }else{node.style.removeProperty('--channel-fill');delete node.dataset.channels;}
+  }
+  // A single visual scheduler for all keys, driven by the audio clock.
+  // No pair of repeating timers for every individual note.
+  function lamp(midi,at,duration,channel=-1){
+    if(!keyElements.has(midi)||channel===9)return;
+    lampQueue.push({midi,channel,on:at,off:at+Math.max(.03,duration),started:false});
+    if(lampLoop===null)lampLoop=setInterval(updateLamps,30);
+  }
+  function updateLamps(){
+    if(paused||!ctx)return;
+    const now=ctx.currentTime,changed=new Set();
+    for(let i=lampQueue.length-1;i>=0;i--){
+      const n=lampQueue[i];
+      if(now>=n.off){
+        if(n.started){const active=lights.get(n.midi);if(active){
+          const remain=(active.get(n.channel)||1)-1;
+          if(remain>0)active.set(n.channel,remain);else active.delete(n.channel);
+          if(!active.size)lights.delete(n.midi);
+        }changed.add(n.midi);}
+        lampQueue[i]=lampQueue[lampQueue.length-1];lampQueue.pop();continue;
+      }
+      if(!n.started&&now>=n.on){
+        n.started=true;let active=lights.get(n.midi);
+        if(!active){active=new Map();lights.set(n.midi,active);}
+        active.set(n.channel,(active.get(n.channel)||0)+1);changed.add(n.midi);
+      }
+    }
+    for(const midi of changed)paintLamp(midi);
+    if(!lampQueue.length){clearInterval(lampLoop);lampLoop=null;}
+  }
+  function clearLamps(){
+    if(lampLoop!==null)clearInterval(lampLoop);lampLoop=null;lampQueue.length=0;lights.clear();
+    keyElements.forEach((node,midi)=>paintLamp(midi));
+  }
+  function renderMidiLegend(song){
+    const override=$('midiOverride');midiOverride='original';override.replaceChildren(new Option('Original instruments','original'),new Option('All melodic channels','all'));$('midiVoiceOptions').hidden=!song;
+    if(song){for(const c of song.channels)if(c!==9)override.append(new Option('Channel '+(c+1),String(c)));}
+    override.value='original';
+    const legend=$('midiLegend');legend.replaceChildren();legend.hidden=!song;
+    if(!song)return;
+    const channels=new Map();
+    for(const note of song.notes){
+      if(!channels.has(note.channel))channels.set(note.channel,new Set());
+      channels.get(note.channel).add(note.program+1);
+    }
+    for(const [channel,programs] of [...channels].sort((a,b)=>a[0]-b[0])){
+      const item=document.createElement('span'),swatch=document.createElement('i');
+      swatch.className='channel-swatch';swatch.style.background=CHANNEL_COLORS[channel];swatch.setAttribute('aria-hidden','true');
+      const desc=channel===9?'CH 10 - Drums (not lit)':'CH '+(channel+1)+' - '+(programs.size===1?'GM '+[...programs][0]:'multiple patches');
+      item.append(swatch,desc);legend.append(item);
+    }
   }
   function stopTransport(announce = true) {
     transportGeneration++;
+    const wasPaused=paused;paused=false;pauseDisplay=null;
     if (loop) { clearInterval(loop); loop = null; }
-    if (endTimer) { clearTimeout(endTimer); endTimer = null; }
+    if (endTimer) { clearInterval(endTimer); endTimer = null; }
     clearLamps();
     if ((transport?.type === 'midi' || transport?.sampleBank) && ctx) {
       if (transport.sampleBank) transport.sampleBank.stopSong();
-      else transport.active.forEach(n => n.sound.release(ctx.currentTime));
+      transport.active?.forEach(n => n.sound.release(ctx.currentTime));
     }
     if (transport?.bus && ctx) {
       const b = transport.bus, now = ctx.currentTime;
       b.gain.cancelScheduledValues(now);
-      b.gain.setTargetAtTime(.00001, now, .02);
+      if(wasPaused)b.gain.setValueAtTime(0,now);else b.gain.setTargetAtTime(.00001, now, .02);
       const channels=transport.channelBuses||[];
       setTimeout(() => { try { channels.forEach(c=>{c.gain.disconnect();c.pan?.disconnect();}); b.disconnect(); } catch (_) {} }, 2500);
     }
     transport = null;
+    if(wasPaused&&ctx)ctx.resume().catch(()=>{});
     reflectButtons();
     if (announce) show('EK-1 READY', voiceLabel());
+  }
+  function demoLeadSound(midi,at,duration,tr,originalTone,velocity=.28){
+    if(followDemoVoice&&engine==='fm')return EK1FM.voice(ctx,tr.bus,midi,at,duration,fmIndex,fmSettings,velocity*EK1Levels.FM_GAIN);
+    return voice(midi,at,duration,followDemoVoice&&engine==='classic'?tone:originalTone,velocity,tr.bus);
   }
   function scheduleStep() {
     if (!transport) return;
@@ -361,7 +435,7 @@
       const song = SONGS[tr.song];
       if (step >= song.bars * STEPS_PER_BAR) {
         if (loop) { clearInterval(loop); loop = null; }
-        if (!endTimer) endTimer = setTimeout(() => { stopTransport(); show('DEMO FINISHED', song.title.toUpperCase()); }, Math.max(100, (at - ctx.currentTime + .65) * 1000));
+        if (!endTimer) endTimer = clockTimer(at+.65,() => { stopTransport(); show('DEMO FINISHED', song.title.toUpperCase()); });
         return false;
       }
       drumsForStep(step, at, song.rhythm, tr.bus);
@@ -376,7 +450,7 @@
         const play = song.events.filter(n => n.step === step);
         for (const n of play) {
           const demoTone = song.sections ? song.sections[Math.floor(step / 64) % song.sections.length] : song.lead;
-          voice(n.midi, at, n.length * beat * .91, demoTone, .43, tr.bus);
+          demoLeadSound(n.midi,at,n.length*beat*.91,tr,demoTone);
           lamp(n.midi, at, n.length * beat);
         }
       }
@@ -395,7 +469,7 @@
     return true;
   }
   function tick() {
-    if (!transport || !ctx) return;
+    if (!transport || !ctx || paused) return;
     let count = 0;
     while (transport && transport.nextTime < ctx.currentTime + .135 && count++ < 20) {
       if (!scheduleStep()) break;
@@ -409,10 +483,11 @@
     const song=SONGS[index];
     if(bank){
       transport=makeMidiTransport('demo',demoArrangement(index),bank,createBus());
-      transport.demoIndex=index;transport.demoBar=1;
+      transport.demoIndex=index;transport.demoBar=1;transport.localLead=[];transport.bus.gain.value=.70;
       loop=setInterval(midiTick,25);reflectButtons();demoDisplay(transport,1);midiTick();
     }else{
       transport={type:'demo',song:index,step:0,nextTime:ctx.currentTime+.08,bpm:song.tempo,bus:createBus()};
+      transport.bus.gain.value=.70;
       loop=setInterval(tick,25);reflectButtons();demoDisplay(transport,1);tick();
     }
   }
@@ -422,7 +497,7 @@
     transport = { type: 'rhythm', rhythm, step: 0, nextTime: ctx.currentTime + .08, bpm: tempo, bus: createBus() };
     loop = setInterval(tick, 25);
     reflectButtons();
-    show(RHYTHMS[rhythm].name.toUpperCase() + ' RHYTHM', tempo + ' BPM • PLAYING');
+    show(RHYTHMS[rhythm].name.toUpperCase() + ' RHYTHM', tempo + ' BPM - PLAYING');
     tick();
   }
   function stopHeld() {
@@ -431,11 +506,11 @@
     keyElements.forEach(node => node.classList.remove('pressed'));
   }
   async function press(midi, token) {
-    if (held.has(token) || pending.has(token)) return;
+    if (paused || held.has(token) || pending.has(token)) return;
     pending.add(token);
     const ready = await audio();
     pending.delete(token);
-    if (!ready || cancelled.has(token)) { cancelled.delete(token); return; }
+    if (!ready || paused || cancelled.has(token)) { cancelled.delete(token); return; }
     if (held.has(token)) return;
     if (autoChord && midi < 60 && transport?.type !== 'demo' && transport?.type !== 'midi') {
       heldChord = label(midi + 12) + ($('chordType').value === 'minor' ? 'm' : '');
@@ -450,7 +525,7 @@
         take.push({ midi, tone:engine==='fm'?EK1FM.presets[fmIndex].tone:engine==='soundfont'&&bank?EK1MIDI.toneFor(bank.selected.program):tone, ...(engine==='fm'?{fm:{index:fmIndex,settings:{...fmSettings}},program:EK1FM.presets[fmIndex].program}:{}), ...(engine==='soundfont'&&bank ? {program:bank.selected.program,bankMSB:bank.selected.bankMSB,bankLSB:bank.selected.bankLSB,bankGeneration} : {}), t: Math.max(0, ctx.currentTime - takeStart), length: null });
         held.get(token).takeIndex = take.length - 1;
       }
-      if (transport?.type !== 'demo' && transport?.type !== 'midi') show(voiceLabel(), 'KEY ' + label(midi) + (recording ? ' • RECORDING' : ''));
+      if (transport?.type !== 'demo' && transport?.type !== 'midi') show(voiceLabel(), 'KEY ' + label(midi) + (recording ? ' - RECORDING' : ''));
     }
     keyElements.get(midi)?.classList.add('pressed');
   }
@@ -469,7 +544,7 @@
     clearTimeout(recordTimer); recordTimer = null;
     for (const e of take) if (e.length === null) e.length = Math.max(.08, ctx.currentTime - takeStart - e.t);
     reflectButtons();
-    show('RECORDING SAVED', take.length + ' NOTES • PLAY BACK OR CLEAR');
+    show('RECORDING SAVED', take.length + ' NOTES - PLAY BACK OR CLEAR');
   }
   async function toggleRecord() {
     if (recording) { endRecord(); return; }
@@ -479,7 +554,7 @@
     take = []; takeStart = ctx.currentTime; recording = true;
     recordTimer = setTimeout(endRecord, 120000);
     reflectButtons();
-    show('RECORDING', 'PLAY THE KEYS • REC TO FINISH');
+    show('RECORDING', 'PLAY THE KEYS - REC TO FINISH');
   }
   async function playTake() {
     if (!take.length || recording || !await audio()) return;
@@ -489,8 +564,8 @@
       transport=makeMidiTransport('take',EK1MIDI.parse(EK1MIDI.encodeTake(take)),bank,bus);
       loop=setInterval(midiTick,25);reflectButtons();show('PLAYING RECORDING',take.length+' NOTES');midiTick();return;
     }
-    transport = { type: 'take', bus };
     const start = ctx.currentTime + .09;
+    transport = { type: 'take', bus, start };
     for (const n of take) {
       const at = start + n.t;
       if(n.fm)EK1FM.voice(ctx,bus,n.midi,at,n.length||.12,n.fm.index,n.fm.settings,.38*EK1Levels.FM_GAIN);
@@ -498,7 +573,7 @@
       lamp(n.midi, at, n.length || .12);
     }
     const end = Math.max(...take.map(n => n.t + (n.length || .12)));
-    endTimer = setTimeout(() => { stopTransport(); show('PLAYBACK FINISHED', take.length + ' RECORDED NOTES'); }, (end + .8) * 1000);
+    endTimer = clockTimer(start+end+.8,() => { stopTransport(); show('PLAYBACK FINISHED', take.length + ' RECORDED NOTES'); });
     reflectButtons();
     show('PLAYING RECORDING', take.some(n=>n.bankGeneration!==undefined)?'ORIGINAL BANK UNAVAILABLE':take.length + ' NOTES');
   }
@@ -512,7 +587,7 @@
       const parsed=EK1MIDI.parse(await file.arrayBuffer());
       if(id!==importRequest||recording)return;
       if(transport?.type==='midi')stopTransport(false);
-      importedMidi=parsed; midiName=file.name;
+      importedMidi=parsed; midiName=file.name;renderMidiLegend(parsed);
       const seconds=Math.round(parsed.duration), length=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
       midiMessage(midiName+' | '+parsed.notes.length+' notes | '+parsed.channels.length+' parts | '+length);
       show('MIDI READY', 'PRESS PLAY MIDI');
@@ -529,7 +604,7 @@
   function makeMidiTransport(type,song,sampleBank,bus){
     const tr={type,song,index:0,controlIndex:0,start:ctx.currentTime+.08,active:[],bus,sampleBank};
     if(sampleBank){sampleBank.stopSong();tr.events=EK1MIDI.timeline(song);}
-    else {
+    {
       tr.channelBuses=Array.from({length:16},()=>{
         const gain=ctx.createGain(),pan=ctx.createStereoPanner?.();
         gain.gain.value=100/127;
@@ -539,28 +614,80 @@
     }
     return tr;
   }
+  // Only imported MIDI can be overridden; Song Builder and recorded takes
+  // keep their authored part assignments. Percussion always retains channel 10.
+  function followsMidiVoice(tr,n){
+    return tr.type==='midi'&&!tr.composing&&n.channel!==9&&(midiOverride==='all'||midiOverride===String(n.channel));
+  }
+  function localMidiVoice(tr,n,at,end,override){
+    const bus=tr.channelBuses[n.channel].gain,velocity=n.velocity/127*.23;
+    if(override&&engine==='fm')return EK1FM.voice(ctx,bus,n.key,at,Math.max(.01,end-at),fmIndex,fmSettings,velocity*EK1Levels.FM_GAIN);
+    return voice(n.key,at,Math.max(.01,end-at),override&&engine==='classic'?tone:EK1MIDI.toneFor(n.program),velocity,bus);
+  }
+  function applyMidiControl(tr,e,at){
+    const c=tr.channelBuses[e.channel];if(!c)return;
+    if(e.control===7)c.volume=e.value;else if(e.control===11)c.expression=e.value;
+    if(e.control===7||e.control===11)c.gain.gain.setTargetAtTime(c.volume*c.expression/(127*127),at,.005);
+    if(e.control===10&&c.pan)c.pan.pan.setTargetAtTime((e.value-64)/64,at,.005);
+  }
+  function repeatMidi(tr){return tr.type==='midi'&&!tr.composing&&$('midiLoop').checked&&tr.song===importedMidi;}
+  function finishMidi(tr){
+    if(transport!==tr)return;
+    if(repeatMidi(tr)){
+      const count=(tr.repeatCount||0)+1;
+      // Reset only song channels, not the independent live SoundFont channel.
+      // Recreate channel buses to discard old controller automation and notes.
+      stopTransport(false);
+      transport=makeMidiTransport('midi',tr.song,tr.sampleBank,createBus());
+      transport.repeatCount=count;
+      loop=setInterval(midiTick,25);reflectButtons();
+      show('MIDI PLAYBACK','LOOP '+(count+1)+' - PLAY ALONG');
+      midiTick();return;
+    }
+    stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');
+  }
+  function returnToKeyboard(){
+    const instrument=document.querySelector('.instrument'),keys=document.querySelector('.keyboard-scroll');
+    const target=instrument.getBoundingClientRect().height>window.innerHeight?keys:instrument;
+    keys.focus({preventScroll:true});
+    // Immediate navigation avoids focus/scroll animation conflicts in Safari.
+    target.scrollIntoView({block:target===keys?'center':'start',behavior:'instant'});
+  }
   function midiTick() {
     const tr=transport;
-    if(!tr||(tr.type!=='midi'&&!tr.sampleBank))return;
+    if(paused||!tr||(tr.type!=='midi'&&!tr.sampleBank))return;
     const now=ctx.currentTime;
     if(tr.sampleBank){
       // Dispatch a single chronological queue. Offs precede ons at a shared
       // tick; no early note-on can overtake a still-pending note-off.
+      if(tr.localLead)tr.localLead=tr.localLead.filter(n=>n.end>now);
+      tr.active=tr.active.filter(n=>n.end>now);
       let work=0;
       while(tr.index<tr.events.length && tr.start+tr.events[tr.index].time<=now && work++<2048){
         const e=tr.events[tr.index++],n=e.note;
-        if(e.kind==='control'){tr.sampleBank.songControl(e);continue;}
+        if(e.kind==='control'){tr.sampleBank.songControl(e);applyMidiControl(tr,e,now);continue;}
         if(e.kind==='off'){tr.sampleBank.songOff(n);continue;}
         const end=tr.start+n.time+n.duration;
         if(end<=now||(tr.type==='demo'&&melodyOff&&n.channel===0))continue;
-        tr.sampleBank.songOn(n);
-        if(tr.type!=='demo'||n.channel===0)lamp(n.key,now,end-now);
+        if(tr.type==='demo'&&n.channel===0&&followDemoVoice&&engine!=='soundfont'){
+          const sound=demoLeadSound(n.key,now,end-now,tr,EK1MIDI.toneFor(n.program),.25);tr.localLead.push({sound,end:end+.7});
+        }else if(followsMidiVoice(tr,n)){
+          if(engine==='soundfont'){
+            tr.sampleBank.songOn(n,bank.selected);
+            tr.lastOverride={channel:n.channel,engine,voice:$('tone').value};
+          }else if(tr.active.length<64){
+            const sound=localMidiVoice(tr,n,now,end,true);tr.active.push({sound,end:end+1.2});
+            tr.lastOverride={channel:n.channel,engine,voice:$('tone').value};
+          }
+        }else tr.sampleBank.songOn(n,tr.type==='demo'&&n.channel===0&&followDemoVoice&&engine==='soundfont'?bank.selected:null);
+        if(tr.type!=='demo'||n.channel===0)lamp(n.key,now,end-now,tr.type==='midi'?n.channel:-1);
       }
       if(tr.type==='demo'){
         const bar=Math.min(16,1+Math.floor(Math.max(0,now-tr.start)/(240/SONGS[tr.demoIndex].tempo)));
         if(bar!==tr.demoBar){tr.demoBar=bar;demoDisplay(tr,bar);}
       }
-      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+.7){
+      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+(repeatMidi(tr)?.15:.7)){
+        if(tr.type==='midi'){finishMidi(tr);return;}
         const title=tr.type==='demo'?SONGS[tr.demoIndex].title.toUpperCase():'PRESS PLAY TO REPEAT';
         stopTransport(false);show(tr.type==='demo'?'DEMO FINISHED':tr.type==='take'?'PLAYBACK FINISHED':'MIDI FINISHED',title);
       }
@@ -568,10 +695,7 @@
     }
     const controls=tr.song.controls||[];
     while(tr.controlIndex<controls.length&&tr.start+controls[tr.controlIndex].time<now+.135){
-      const e=controls[tr.controlIndex++],c=tr.channelBuses[e.channel],at=Math.max(now,tr.start+e.time);
-      if(e.control===7)c.volume=e.value;else if(e.control===11)c.expression=e.value;
-      if(e.control===7||e.control===11)c.gain.gain.setTargetAtTime(c.volume*c.expression/(127*127),at,.005);
-      if(e.control===10&&c.pan)c.pan.pan.setTargetAtTime((e.value-64)/64,at,.005);
+      const e=controls[tr.controlIndex++],at=Math.max(now,tr.start+e.time);applyMidiControl(tr,e,at);
     }
     tr.active=tr.active.filter(n=>n.end>now);
     let work=0;
@@ -582,19 +706,23 @@
       if(n.channel===9){
         if(at>=now-.12)drum(EK1MIDI.drumFor(n.key),begin,n.velocity/127*.55,channel);
       }else if(tr.active.length<64){
-        const sound=voice(n.key,begin,Math.max(.01,end-begin),EK1MIDI.toneFor(n.program),n.velocity/127*.23,channel);
-        tr.active.push({sound,end:end+.7});lamp(n.key,begin,Math.max(.01,end-begin));
+        const override=followsMidiVoice(tr,n),sound=localMidiVoice(tr,n,begin,end,override);
+        if(override)tr.lastOverride={channel:n.channel,engine,voice:$('tone').value};
+        tr.active.push({sound,end:end+1.2});lamp(n.key,begin,Math.max(.01,end-begin),n.channel);
       }
     }
-    if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');}
+    if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+(repeatMidi(tr)?.15:.7)){finishMidi(tr);}
   }
   async function playMidi() {
     if(transport?.type==='midi'&&!transport.composing){stopTransport();return;}
-    if(!importedMidi||recording||bankLoading||!await audio())return;
+    if(!importedMidi||recording||bankLoading)return;
+    const request=++transportGeneration;
+    if(!await audio()||request!==transportGeneration)return;
     stopTransport(false);
-    transport=makeMidiTransport('midi',importedMidi,bank,createBus());
+    transport=makeMidiTransport('midi',importedMidi,bank,createBus());transport.repeatCount=0;
     loop=setInterval(midiTick,25);reflectButtons();
     show('MIDI PLAYBACK','PLAY ALONG ON THE KEYS');midiTick();
+    if($('midiReturn').checked)returnToKeyboard();
   }
   async function playComposition(bytes){
     if(recording||bankLoading)throw Error('Finish recording or loading the bank first.');
@@ -614,6 +742,19 @@
     if(engine==='fm')return EK1FM.presets[fmIndex].name.toUpperCase();
     return String(tone+1).padStart(2,'0')+' '+TONES[tone].name.toUpperCase();
   }
+  function favouriteId(value){return value.startsWith('sf-')?bankGeneration+':'+value:value;}
+  function refreshFavourites(){
+    const toneMenu=$('tone'),value=toneMenu.value,id=favouriteId(value),toggle=$('favouriteVoice'),menu=$('favouriteList');
+    toggle.textContent=favourites.has(id)?'REMOVE FAVOURITE':'FAVOURITE CURRENT VOICE';
+    toggle.setAttribute('aria-pressed',String(favourites.has(id)));
+    toggle.disabled=recording||bankLoading||(!favourites.has(id)&&favourites.size>=64);
+    const previous=menu.value;
+    const choices=[...favourites.values()].filter(p=>[...toneMenu.options].some(o=>o.value===p.value)&&(!p.value.startsWith('sf-')||p.generation===bankGeneration));
+    menu.replaceChildren(new Option(choices.length?'Choose a favourite…':'No favourites yet',''),...choices.map(p=>new Option(p.label,p.value)));
+    menu.value=choices.some(p=>p.value===previous)?previous:'';
+    menu.disabled=recording||bankLoading||!choices.length;
+  }
+  function clearBankFavourites(){for(const [id,p] of favourites)if(p.value.startsWith('sf-'))favourites.delete(id);}
   function rebuildVoices(){
     const group=(label,options)=>{
       const g=document.createElement('optgroup');g.label=label;
@@ -645,8 +786,9 @@
     }else{
       engine='classic';tone=Number(value);
     }
+    if(transport?.type==='demo'&&followDemoVoice&&transport.sampleBank){transport.sampleBank.stopSongChannel(0);for(const n of transport.localLead||[])n.sound.release(ctx.currentTime);transport.localLead=[];}
     updateFM();
-    show(voiceLabel(),engine==='fm'?'FM VOICE':engine==='soundfont'?'SOUNDFONT VOICE':'READY TO PLAY');
+    if(!paused)show(voiceLabel(),engine==='fm'?'FM VOICE':engine==='soundfont'?'SOUNDFONT VOICE':'READY TO PLAY');
   }
   function bankMessage(message){$('bankStatus').textContent=message;}
   async function loadBank(file){
@@ -660,7 +802,7 @@
       // Keep the previous bank if validation or engine loading fails.
       const next=await EK1SoundFont.create(ctx,master,bytes);
       if(transport)stopTransport(false);stopHeld();
-      bank?.destroy();bank=next;bankFileRef=file;bankGeneration++;bankVoiceIndex=0;engine='soundfont';rebuildVoices();updateFM();
+      bank?.destroy();clearBankFavourites();bank=next;bankFileRef=file;bankGeneration++;bankVoiceIndex=0;engine='soundfont';rebuildVoices();updateFM();
       bankMessage(file.name+' | '+bank.presets.length+' melodic voices');
       show('SOUNDFONT READY',bank.selected.name.toUpperCase());
     }catch(e){bankMessage('Could not open SoundFont: '+e.message+(bank?' (previous bank kept)':''));}
@@ -668,7 +810,7 @@
   }
   function unloadBank(){
     if(!bank||bankLoading||recording)return;
-    stopTransport(false);stopHeld();bank.destroy();bank=null;bankFileRef=null;
+    stopTransport(false);stopHeld();bank.destroy();clearBankFavourites();bank=null;bankFileRef=null;
     if(engine==='soundfont')engine='classic';
     rebuildVoices();updateFM();
     bankMessage('20 built-in voices. Add a local SoundFont to expand the voice menu.');
@@ -676,6 +818,7 @@
   }
   function buildKeys() {
     const bed = $('keys');
+    const upper=$('sharpLabels'),lower=$('naturalLabels');
     let white = 0;
     const whiteCount = Array.from({length:LAST - FIRST + 1}, (_,i) => FIRST + i).filter(n => !SHARPS.has(n % 12)).length;
     for (let midi = FIRST; midi <= LAST; midi++) {
@@ -692,7 +835,8 @@
         element.style.width = (100 / whiteCount) + '%';
         white++;
       }
-      const shortcutIndex = midi - 60;
+      const rail=document.createElement('span');rail.className='rail-note';rail.textContent=label(midi);rail.style.left=(black?position:position+50/whiteCount)+'%';rail.dataset.note=midi;(black?upper:lower).append(rail);
+      const shortcutIndex = midi - SHORTCUT_BASE;
       const shortcut = SHORTCUTS[shortcutIndex];
       element.innerHTML = '<span class="note"></span><span class="shortcut"></span>';
       element.querySelector('.note').textContent = label(midi);
@@ -742,12 +886,29 @@
       updateButtons();
     });
   }
+  function updateKeyboardMapping(){
+    for(const [midi,key] of keyElements){
+      const shortcut=SHORTCUTS[midi-SHORTCUT_BASE-keyboardOctave*12];
+      key.querySelector('.shortcut').textContent=shortcut?shortcut.toUpperCase():'';
+      key.setAttribute('aria-label','Play '+label(midi)+(shortcut?', keyboard '+shortcut:''));
+    }
+    $('octaveValue').textContent=keyboardOctave===0?'0':(keyboardOctave>0?'+':'')+keyboardOctave;
+    $('octaveDown').disabled=keyboardOctave<=-1;$('octaveUp').disabled=keyboardOctave>=1;
+  }
+  function shiftKeyboardOctave(delta){
+    const next=Math.max(-1,Math.min(1,keyboardOctave+delta));if(next===keyboardOctave)return;
+    for(const token of [...held.keys(),...pending])if(token.startsWith('hardware-'))release(token);
+    keyboardOctave=next;updateKeyboardMapping();
+  }
   function setupKeyboardShortcuts() {
-    const shortcutMap = new Map(SHORTCUTS.map((key, i) => [key, 60 + i]));
+    $('octaveDown').addEventListener('click',()=>shiftKeyboardOctave(-1));
+    $('octaveUp').addEventListener('click',()=>shiftKeyboardOctave(1));
+    updateKeyboardMapping();
     document.addEventListener('keydown', event => {
       if (event.repeat || event.ctrlKey || event.altKey || event.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName) || event.target.isContentEditable) return;
-      const midi = shortcutMap.get(event.key.toLowerCase());
-      if (midi === undefined) return;
+      if(event.key===','||event.key==='.'){event.preventDefault();shiftKeyboardOctave(event.key===','?-1:1);return;}
+      const index=SHORTCUTS.indexOf(event.key.toLowerCase());if(index<0)return;
+      const midi=SHORTCUT_BASE+index+keyboardOctave*12;if(midi<FIRST||midi>LAST)return;
       event.preventDefault();
       press(midi, 'hardware-' + event.code);
     });
@@ -760,6 +921,23 @@
     $('rhythm').replaceChildren(...RHYTHMS.map((p, i) => new Option(('0' + (i + 1)).slice(-2) + ' ' + p.name, String(i))));
     $('demoSong').replaceChildren(...SONGS.map((p, i) => new Option(('0' + (i + 1)).slice(-2) + ' ' + p.title, String(i))));
     $('tone').addEventListener('change', selectVoice);
+    $('favouriteVoice').addEventListener('click',()=>{
+      if(recording||bankLoading)return;
+      const option=$('tone').selectedOptions[0],value=option.value,id=favouriteId(value);
+      if(favourites.has(id))favourites.delete(id);
+      else if(favourites.size<64)favourites.set(id,{value,label:option.textContent,generation:bankGeneration});
+      refreshFavourites();
+    });
+    $('favouriteList').addEventListener('change',()=>{
+      const value=$('favouriteList').value;
+      if(recording||bankLoading||!value)return;
+      $('tone').value=value;selectVoice();
+    });
+    for(const name of ['reverb','chorus'])$('effect-'+name).addEventListener('input',()=>{
+      effects[name]=Number($('effect-'+name).value)/100;
+      $('effect-'+name+'Value').textContent=Math.round(effects[name]*100)+'%';
+      outputStage?.setEffects(effects);
+    });
     $('rhythm').addEventListener('change', () => { rhythm = Number($('rhythm').value); if (transport?.type === 'rhythm') beginRhythm(); else show(RHYTHMS[rhythm].name.toUpperCase(), 'RHYTHM SELECTED'); });
     $('tempo').addEventListener('input', () => {
       tempo = Number($('tempo').value);
@@ -791,6 +969,9 @@
       if (transport?.type === 'rhythm') stopTransport();
       else beginRhythm();
     });
+    $('pause').addEventListener('click',togglePause);
+    $('midiOverride').addEventListener('change',()=>{midiOverride=$('midiOverride').value;if(transport?.type==='midi'&&!transport.composing)transport.lastOverride=null;reflectButtons();});
+    $('demoFollow').addEventListener('change',()=>{followDemoVoice=$('demoFollow').checked;if(transport?.type==='demo'&&transport.sampleBank){transport.sampleBank.stopSongChannel(0);for(const n of transport.localLead||[])n.sound.release(ctx.currentTime);transport.localLead=[];}reflectButtons();});
     $('stop').addEventListener('click', () => {
       if (recording) endRecord();
       stopTransport();
@@ -800,7 +981,7 @@
     $('melodyOff').addEventListener('click', () => {
       melodyOff = !melodyOff; reflectButtons();
       if (transport?.type === 'demo') {
-        if(melodyOff&&transport.sampleBank){transport.sampleBank.stopSongChannel(0);clearLamps();}
+        if(melodyOff&&transport.sampleBank){transport.sampleBank.stopSongChannel(0);for(const n of transport.localLead||[])n.sound.release(ctx.currentTime);transport.localLead=[];clearLamps();}
         demoDisplay(transport,transport.sampleBank?transport.demoBar:Math.min(16,1+Math.floor(transport.step/16)));
       }
     });
@@ -838,14 +1019,15 @@
     async renderComposition(bytes,rate,progress,signal){
       if(recording||bankLoading)throw Error("Finish recording or loading your bank first.");
       if(transport)stopTransport(false);stopHeld();
-      return EK1AudioExport.render(EK1MIDI.parse(bytes),rate,bankFileRef,volume,voice,drum,progress,signal);
+      return EK1AudioExport.render(EK1MIDI.parse(bytes),rate,bankFileRef,volume,voice,drum,progress,signal,{...effects});
     },
     stopComposition(){if(transport?.composing)stopTransport();},
     downloadComposition(bytes){downloadMidi(bytes,'EK-1-song.mid');},
     tones: TONES.length,
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
-    get state() { return { transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    returnToKeyboard,
+    get state() { return { midiLoop:$('midiLoop').checked,midiRepeats:transport?.repeatCount||0,midiOverride, lastMidiOverride:transport?.lastOverride||null, keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoArrangement,
     outputPeak(){if(!outputMeter)return 0;const samples=new Float32Array(outputMeter.fftSize);outputMeter.getFloatTimeDomainData(samples);return samples.reduce((peak,n)=>Math.max(peak,Math.abs(n)),0);},

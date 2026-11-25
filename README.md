@@ -1,31 +1,97 @@
-# Electronic Keyboard (Model EK-1)
+# 🎹 Electronic Keyboard (Model EK-1)
 
-Development version **0.9.3**. A 49-key browser instrument inspired by classic home keyboards, with 12 classic voices, eight original six-operator FM voices, six rhythms, five original demos, MIDI playback, and a four-part Song Builder. No affiliation with Casio or Yamaha.
+**Version 1.0.0 | Free, open-source, offline browser instrument**
 
-## Start playing
+EK-1 brings the feel of a classic home keyboard to your browser. Play a few notes, experiment with instruments, enjoy the built-in demo songs, or make a song of your own. No music theory required.
 
-Extract the whole ZIP and open `index.html` in a current browser. No local server, installer, account, network access or terminal is required. Keep the supporting files next to the HTML file. Click a key to enable audio. Computer keys Z through M and Q through U play two octaves; the on-screen keyboard spans C3 to C7. Mobile octave navigation is next to the keys.
+[Download EK-1](https://github.com/NixMcRetro/EK-1/releases) - [Quick-start guide](START-HERE.txt) - [Version history](CHANGELOG.md)
 
-## Instruments and SoundFonts
+## 🚀 Getting started
 
-Choose a Classic or FM voice in VOICE. FM offers brightness, attack and release. Use OPEN SOUNDFONT to open a local SF2/SF3 bank (maximum 512 MiB). No SoundFont is included. [FluidR3 GM](https://www.pianobooster.org/download.html) by Frank Wen is the recommended optional download (148 MB, MIT). Extract the downloaded bank if necessary, then open the SF2 file with the file picker. Imported SoundFonts stay available while switching Classic or FM voices. MIDI playback, all five built-in demos and composition use a loaded SoundFont, otherwise the built-in approximations. Original demo melodies, rhythms and chords are preserved, with GM lead, chord, bass and drum channels. MELODY OFF immediately silences the sampled lead while accompaniment continues. Your playing voice stays independent. A narrow or non-GM bank may substitute instruments for missing presets. STOP also silences held SoundFont notes. Bank files are never uploaded. Loading large banks, especially compressed SF3, can use more memory than the file size.
+1. Download the offline ZIP from [Releases](https://github.com/NixMcRetro/EK-1/releases).
+2. Extract the entire archive and double-click `index.html`.
+3. Click a piano key to enable audio, then start playing!
 
-## Song Builder
+No installation, local server, account, terminal, or internet connection is required after downloading. Keep the supporting files beside the HTML file.
 
-Choose a style, feel, key, pattern and length, then NEW ARRANGEMENT. Natural (default) adds deterministic humanisation, style-specific swing, recurring melodic motifs, close chord inversions, bass movement, drum fills and style-appropriate General MIDI instruments. Expressive increases timing and velocity variation and adds denser fills. Original preserves the previous arrangement engine, including playback of projects saved before v0.9.3. Existing notes are not regenerated when changing feel; use NEW MELODY to replace the melody while retaining chords, or NEW CHORDS + MELODY to cycle to a different chord pattern and regenerate both while retaining sections and mixer settings. PLAY SONG returns to the instrument by default; uncheck Return to keyboard on playback to stay in Song Builder. Main volume starts at 25%, with conservative FM and SoundFont trims and a shared compressor and final sample-peak ceiling. A digital ceiling cannot guarantee safe headphone loudness; keep your device volume low when auditioning. Edit individual chords and melody notes, mute or change instruments, adjust track levels and pan, and append labelled sections up to 64 bars. A rest is silent; Hold extends the preceding note. New melody generates variations. Save and reopen editable `.ek1` projects; replacing an edited project prompts you to save first. Projects store the bank filename, not the actual samples. Reopen the bank to reproduce the original instruments.
+**Headphones:** Main volume starts at 50%. Start with low device volume. EK-1 limits digital output peaks, but this cannot guarantee safe headphone loudness.
 
-Export a multitrack MIDI file or stereo audio using the actual selected bank. WAV: 44.1/48 kHz, 16/24-bit PCM. MP3: 128/192/256/320 kbps. Rendering is local and cancellable; classic OfflineAudioContext rendering may finish its current render before cancellation takes effect. Audio exports are limited to five minutes and include a two-second release tail. Live FM and accompaniment are not recorded into Song Builder audio. MIDI import supports formats 0 and 1, up to 8 MiB and 30 minutes, with tempo changes, channel volume, pan, expression, sustain and program/bank selection. Full GM/GS/XG controllers, pitch bend, hardware MIDI, DX7 SysEx and arbitrary MIDI song editing are not implemented.
+## 🎹 Play the keyboard
 
-## Offline architecture and licensing
+- 49 playable keys (C3-C7), with printed note names and mouse, touch, and computer keyboard input.
+- 12 Classic voices and eight original six-operator FM voices, with adjustable FM brightness, attack, and release.
+- Six rhythm styles, automatic chord accompaniment, five original demonstration songs, and recording/playback.
+- Pause, resume, stop, and play along with the demos. The demo lead follows the selected voice by default, while the backing instruments retain their assignments. Switch this off in Sound options if you prefer the original lead.
+- Optional room reverb, chorus, and instrument favourites.
 
-The runtime is an ordinary set of HTML, CSS and JavaScript files, not a server application. The SpessaSynth local bridge replaces the AudioWorklet entrypoint with a legacy ScriptProcessorNode for file:// compatibility. This may use more main-thread CPU and have higher latency. Browser support varies; direct local-file navigation is a release test requirement. See `THIRD-PARTY-NOTICES.txt`, `licenses/`, and `vendor/sources/` for dependencies, original notices, source and modification details. The original EK-1 application is licensed under the GNU General Public License, version 3 or (at your option) any later version (SPDX: GPL-3.0-or-later); see [LICENSE](LICENSE). It is provided without warranty. Third-party licence rights are preserved. LAME is an unmodified separate script, replaceable with an interface-compatible build. No restrictions are imposed on exercise of the third-party licence rights or reverse engineering needed to debug changes to the LAME library.
+| Computer key | Note or action |
+| --- | --- |
+| C | A3 |
+| V | B3 |
+| B | C4 (middle C) |
+| Z to M and Q to U | Two rows of notes from F3 to E5 |
+| Comma / period | Shift the computer keyboard down / up an octave |
 
-## Static hosting
+The displayed piano pitches do not change when you shift the computer shortcuts. Keys outside the displayed range are unavailable.
 
-Deploy this folder unchanged to GitHub Pages or another static host. Use `index.html` as the entry point. Keep the relative paths, `vendor/`, `licenses/` and source archives intact; no runtime build, CDN, server code, or automatic SoundFont downloads are needed. The original application is licensed under GPL-3.0-or-later.
+## 🎛️ SoundFonts
 
-This is a development release candidate, not a stable 1.0.0 release. GitHub Pages and McRetro deployment are separate from this source release. See CHANGELOG.md for version history.
+For a much larger instrument library, try **[FluidR3 GM](https://www.pianobooster.org/download.html)** by Frank Wen (MIT licence, approximately 148 MB).
 
-## Licence and your music
+Download and extract the bank separately, then choose **OPEN SOUNDFONT** in Sound Library / SoundFonts. EK-1 supports local SF2 and SF3 files up to 512 MiB. No SoundFont is bundled, automatically downloaded, or uploaded.
 
-The original EK-1 application, including its original built-in demo definitions and example MIDI to the extent covered by the project's rights, is licensed under GPL-3.0-or-later. No separate CC0 dedication is made. The software licence does not impose GPL terms on independently created music or exported MIDI, WAV, MP3 or project files merely because EK-1 produced them. Third-party material remains subject to its respective rights and licence terms.
+Loaded instruments appear in the VOICE menu and remain available when switching back to Classic or FM. MIDI songs, demo backing, and Song Builder also use the loaded bank. A non-GM bank may substitute missing instruments, and large banks can require considerably more memory than their file size.
+
+## 🎶 MIDI Songs
+
+Open a standard MIDI file, press PLAY MIDI, and watch its notes light up on the keyboard. Each channel has its own colour; shared pitches display split colours.
+
+- Looping and return to keyboard are enabled by default.
+- Pause and resume without restarting the song.
+- Keep the original instruments, or make all melodic channels or a specific channel follow VOICE. Drums remain unchanged.
+- Save a copy of the original MIDI without altering its bytes.
+
+## ✏️ Song Builder
+
+Choose a style, feel, key, chord pattern, and length, then press NEW ARRANGEMENT. EK-1 generates four parts: melody, chords, bass, and drums.
+
+| Style | Feel |
+| --- | --- |
+| Pop, Rock, Disco, Ska, Reggae, Electronic | Original, Natural, Expressive |
+
+Natural adds musical timing, recurring motifs, chord inversions, bass movement, and drum fills. Expressive adds more variation. Original retains the earlier arrangement engine.
+
+Edit the chords and melody, adjust the mixer, mute parts, duplicate sections, and build songs of up to 64 bars. Undo and redo retain 40 committed edits. NEW MELODY keeps the chords; NEW CHORDS + MELODY regenerates both. Existing projects saved before v0.9.2 retain their original arrangement feel.
+
+## 💾 Save your music
+
+| Format | Purpose |
+| --- | --- |
+| EK1 | Editable song project |
+| MIDI | Multitrack notes and instrument assignments |
+| WAV | Stereo PCM, 44.1 or 48 kHz, 16 or 24 bit |
+| MP3 | Stereo audio, 128-320 kbps |
+
+Song Builder audio export uses the selected SoundFont or built-in Classic sounds and includes optional effects. Rendering is local and cancellable, with a five-minute limit plus a two-second release tail. Live playing is not included in Song Builder audio export. Projects remember the bank filename, not its samples.
+
+## 🌙 Make it yours
+
+Choose System, Light, or Dark from the Appearance selector. All five expandable panels start open; collapse whichever ones you do not need. Appearance and panel states are remembered where browser storage is available. Local-file storage can reset when moving to a different folder. MIDI files, SoundFonts, unsaved compositions, favourites, and effects are not automatically restored.
+
+## 🔧 Compatibility and technical notes
+
+- Direct-file operation is tested with Chromium, Firefox, and WebKit on Linux through [GitHub Actions](https://github.com/NixMcRetro/EK-1/actions). Native macOS Safari and physical touch hardware have not been independently tested.
+- MIDI import supports formats 0 and 1, up to 8 MiB and 30 minutes, including tempo changes, sustain, volume, pan, expression, and program/bank selection. Full GM/GS/XG controllers, pitch bend, hardware MIDI, DX7 SysEx, and arbitrary MIDI editing are not implemented.
+- Repeated MIDI playback has a short release/restart gap, rather than guaranteed gapless looping. Percussion and out-of-range notes are not highlighted.
+- The bundled SpessaSynth local bridge uses ScriptProcessorNode with a 2,048-frame buffer for direct-file compatibility. This may increase CPU load and latency.
+- The application is static HTML, CSS, and JavaScript. It can also be hosted unchanged; retain the relative paths, vendor sources, and licences. No runtime CDN, analytics, or automatic bank downloads.
+
+## 📜 Licence and credits
+
+EK-1 is licensed under [GPL-3.0-or-later](LICENSE), without warranty. This covers the original application, original demo definitions, and example MIDI to the extent of the project's rights. Independently created music does not become GPL-licensed merely because EK-1 exported it.
+
+Third-party software retains its own licences. See [Third-party notices](THIRD-PARTY-NOTICES.txt), [Licences](licenses/), and [Vendor sources](vendor/sources/) for exact dependency versions, original notices, and source code. LAME is an unmodified, separately replaceable encoder; applicable third-party rights, including reverse engineering for debugging modifications, are preserved.
+
+EK-1 is inspired by classic home keyboards and is not affiliated with Casio or Yamaha.
+
+Made by Nix McRetro and contributors.
