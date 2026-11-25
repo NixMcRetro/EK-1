@@ -180,7 +180,7 @@
   function demoIndex(tr=transport){return tr?.type==='demo'?(tr.demoIndex??tr.song):null;}
   function demoDisplay(tr,bar){
     const index=demoIndex(tr),song=SONGS[index];
-    show(String(index+1).padStart(2,'0')+' '+song.title.toUpperCase(),'DEMO - '+(tr.sampleBank?'SF':'CLASSIC')+' - BAR '+bar+'/'+song.bars+(melodyOff?' - MELODY OFF':''));
+    show(String(index+1).padStart(2,'0')+' '+song.title.toUpperCase(),'DEMO - '+(tr.sampleBank?'SF':'CLASSIC')+' - BAR '+bar+'/'+song.bars+(melodyOff?' - MELODY OFF':'')+(tr.repeatCount?' - LOOP '+(tr.repeatCount+1):''));
   }
   async function audio() {
     if (!ctx) {
@@ -479,7 +479,7 @@
       const song = SONGS[tr.song];
       if (step >= song.bars * STEPS_PER_BAR) {
         if (loop) { clearInterval(loop); loop = null; }
-        if (!endTimer) endTimer = clockTimer(at+.65,() => { stopTransport(); show('DEMO FINISHED', song.title.toUpperCase()); });
+        if (!endTimer) endTimer = clockTimer(at+($('demoLoop').checked?.15:.65),()=>finishDemo(tr));
         return false;
       }
       drumsForStep(step, at, song.rhythm, tr.backingBus);
@@ -534,13 +534,23 @@
     const request=++transportGeneration;
     if(!await audio()||request!==transportGeneration)return;
     stopTransport(false);
+    startDemo(index,0);
+  }
+  function finishDemo(tr){
+    if(transport!==tr)return;
+    const index=demoIndex(tr),repeatCount=(tr.repeatCount||0)+1,repeat=$('demoLoop').checked;
+    stopTransport(false);
+    if(repeat)startDemo(index,repeatCount);
+    else show('DEMO FINISHED',SONGS[index].title.toUpperCase());
+  }
+  function startDemo(index,repeatCount){
     const song=SONGS[index];
     if(bank){
       transport=makeMidiTransport('demo',demoArrangement(index),bank,createBus());
-      transport.demoIndex=index;transport.demoBar=1;transport.localLead=[];transport.bus.gain.value=.70;backingBus(transport);updateBacking();
+      transport.demoIndex=index;transport.demoBar=1;transport.repeatCount=repeatCount;transport.localLead=[];transport.bus.gain.value=.70;backingBus(transport);updateBacking();
       loop=setInterval(midiTick,25);reflectButtons();demoDisplay(transport,1);midiTick();
     }else{
-      transport={type:'demo',song:index,step:0,nextTime:ctx.currentTime+.08,bpm:song.tempo,bus:createBus()};
+      transport={type:'demo',song:index,step:0,nextTime:ctx.currentTime+.08,bpm:song.tempo,bus:createBus(),repeatCount};
       transport.bus.gain.value=.70;backingBus(transport);
       loop=setInterval(tick,25);reflectButtons();demoDisplay(transport,1);tick();
     }
@@ -746,10 +756,10 @@
         const bar=Math.min(16,1+Math.floor(Math.max(0,now-tr.start)/(240/SONGS[tr.demoIndex].tempo)));
         if(bar!==tr.demoBar){tr.demoBar=bar;demoDisplay(tr,bar);}
       }
-      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+(repeatMidi(tr)?.15:.7)){
+      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+((repeatMidi(tr)||(tr.type==='demo'&&$('demoLoop').checked))?.15:.7)){
         if(tr.type==='midi'){finishMidi(tr);return;}
-        const title=tr.type==='demo'?SONGS[tr.demoIndex].title.toUpperCase():'PRESS PLAY TO REPEAT';
-        stopTransport(false);show(tr.type==='demo'?'DEMO FINISHED':tr.type==='take'?'PLAYBACK FINISHED':'MIDI FINISHED',title);
+        if(tr.type==='demo'){finishDemo(tr);return;}
+        stopTransport(false);show('PLAYBACK FINISHED','PRESS PLAY TO REPEAT');
       }
       return;
     }
@@ -1088,7 +1098,7 @@
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
     returnToKeyboard,
-    get state() { return { backingVolume, accompanimentEngine:transport?.type==='rhythm'?(transport.sampleBank?'soundfont':'classic'):null, backingSampleKeys:bank?[1,2,3,9].reduce((sum,c)=>sum+bank.songChannelKeys(c),0):0, sampleChordKeys:bank?.songChannelKeys(1)||0,sampleBassKeys:bank?.songChannelKeys(2)||0,sampleDrumKeys:bank?.songChannelKeys(9)||0,midiLoop:$('midiLoop').checked,midiRepeats:transport?.repeatCount||0,midiOverride, lastMidiOverride:transport?.lastOverride||null, keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    get state() { return { demoLoop:$('demoLoop').checked,demoRepeats:transport?.type==='demo'?(transport.repeatCount||0):0,backingVolume, accompanimentEngine:transport?.type==='rhythm'?(transport.sampleBank?'soundfont':'classic'):null, backingSampleKeys:bank?[1,2,3,9].reduce((sum,c)=>sum+bank.songChannelKeys(c),0):0, sampleChordKeys:bank?.songChannelKeys(1)||0,sampleBassKeys:bank?.songChannelKeys(2)||0,sampleDrumKeys:bank?.songChannelKeys(9)||0,midiLoop:$('midiLoop').checked,midiRepeats:transport?.repeatCount||0,midiOverride, lastMidiOverride:transport?.lastOverride||null, keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoArrangement,
     outputRms(){if(!outputMeter)return 0;const samples=new Float32Array(outputMeter.fftSize);outputMeter.getFloatTimeDomainData(samples);return Math.sqrt(samples.reduce((sum,n)=>sum+n*n,0)/samples.length);},

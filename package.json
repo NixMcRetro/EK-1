@@ -6,7 +6,7 @@
   "license": "GPL-3.0-or-later",
   "scripts": {
     "test": "node .github/tests/ek1-integrity.mjs && node .github/tests/ek1-midi-codec.mjs && node .github/tests/ek1-musical-arrangement.mjs",
-    "test:browser": "node .github/tests/ek1-preferences.mjs && node .github/tests/ek1-browser-smoke.mjs && node .github/tests/ek1-fm-audio.mjs && node .github/tests/ek1-soundfont-browser.mjs && node .github/tests/ek1-output-levels.mjs && node .github/tests/ek1-pause-browser.mjs && node .github/tests/ek1-midi-override.mjs && node .github/tests/ek1-midi-loop.mjs && node .github/tests/ek1-composition-browser.mjs && node .github/tests/ek1-accompaniment.mjs"
+    "test:browser": "node .github/tests/ek1-preferences.mjs && node .github/tests/ek1-browser-smoke.mjs && node .github/tests/ek1-fm-audio.mjs && node .github/tests/ek1-soundfont-browser.mjs && node .github/tests/ek1-output-levels.mjs && node .github/tests/ek1-pause-browser.mjs && node .github/tests/ek1-midi-override.mjs && node .github/tests/ek1-midi-loop.mjs && node .github/tests/ek1-composition-browser.mjs && node .github/tests/ek1-accompaniment.mjs && node .github/tests/ek1-demo-loop.mjs"
   },
   "devDependencies": {
     "playwright": "1.57.0"

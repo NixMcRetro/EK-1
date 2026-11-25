@@ -7,6 +7,7 @@ All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 - Raise SoundFont engine trim to unity, with the existing shared peak ceiling and 50% master default unchanged.
 - Rebalance sampled demo channel levels and chord velocities; strengthen Classic chords and bass.
 - Add independent backing volume (80% default) for demos and auto accompaniment.
+- Repeat the selected demo by default, with an opt-out in Sound options.
 - Use sampled rhythm, bass and chords with a loaded bank, retaining built-in drums for banks without percussion.
 
 ## [1.0.0] - First stable release

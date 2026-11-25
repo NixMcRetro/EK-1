@@ -3,6 +3,7 @@
 - SoundFont output trim restored to unity.
 - Improved demo and auto-accompaniment balance.
 - Independent BACKING VOLUME, starting at 80%.
+- Automatic demo looping, with an option to play once.
 - Sampled accompaniment when a SoundFont is loaded; built-in drums if no percussion bank is present.
 - Master volume remains 50%; existing peak protection is unchanged.
 

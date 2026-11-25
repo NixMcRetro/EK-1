@@ -21,7 +21,7 @@ No installation, local server, account, terminal, or internet connection is requ
 - 49 playable keys (C3-C7), with printed note names and mouse, touch, and computer keyboard input.
 - 12 Classic voices and eight original six-operator FM voices, with adjustable FM brightness, attack, and release.
 - Six rhythm styles, automatic chord accompaniment, five original demonstration songs, and recording/playback.
-- Pause, resume, stop, and play along with the demos. The demo lead follows the selected voice by default, while the backing instruments retain their assignments. Switch this off in Sound options if you prefer the original lead.
+- Pause, resume, stop, and play along with the demos. The selected demo repeats by default; uncheck Loop demonstration song in Sound options for one-shot playback. Repeats have a short release/restart gap and preserve your chosen voice, backing volume, and melody-off setting. The demo lead follows the selected voice by default, while the backing instruments retain their assignments. Switch this off in Sound options if you prefer the original lead.
 - Optional room reverb, chorus, and instrument favourites.
 - BACKING VOLUME (80% by default) balances demo backing and auto accompaniment independently of live melody. Loaded SoundFonts supply auto-accompaniment bass and chords, and percussion when the bank includes drums; otherwise built-in drums are used.
 

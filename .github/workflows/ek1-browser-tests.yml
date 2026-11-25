@@ -39,6 +39,8 @@ jobs:
         run: node .github/tests/ek1-output-levels.mjs
       - name: Accompaniment and backing balance
         run: node .github/tests/ek1-accompaniment.mjs
+      - name: Demonstration looping
+        run: node .github/tests/ek1-demo-loop.mjs
       - name: Pause and demo voice regression
         run: node .github/tests/ek1-pause-browser.mjs
       - name: MIDI voice override and utility layout
