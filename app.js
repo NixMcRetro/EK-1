@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v0.9.7. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.9.8. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.9.7';
+  const VERSION = '0.9.8';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -109,7 +109,7 @@
     }
   ];
   let ctx, master, outputStage, outputMeter, noise, transport = null, loop = null, endTimer = null, transportGeneration = 0;
-  let paused=false,pauseBusy=false,pauseDisplay=null,followDemoVoice=true;
+  let paused=false,pauseBusy=false,pauseDisplay=null,followDemoVoice=true,midiOverride='original';
   let tone = 0, rhythm = 0, tempo = 116, volume = EK1Levels.DEFAULT_VOLUME, melodyOff = false, autoChord = false;
   let heldChord = null, recording = false, take = [], takeStart = 0, recordTimer = null;
   let importedMidi = null, midiName = '', importRequest = 0;
@@ -385,6 +385,9 @@
     keyElements.forEach((node,midi)=>paintLamp(midi));
   }
   function renderMidiLegend(song){
+    const override=$('midiOverride');midiOverride='original';override.replaceChildren(new Option('Original instruments','original'),new Option('All melodic channels','all'));$('midiVoiceOptions').hidden=!song;
+    if(song){for(const c of song.channels)if(c!==9)override.append(new Option('Channel '+(c+1),String(c)));}
+    override.value='original';
     const legend=$('midiLegend');legend.replaceChildren();legend.hidden=!song;
     if(!song)return;
     const channels=new Map();
@@ -601,7 +604,7 @@
   function makeMidiTransport(type,song,sampleBank,bus){
     const tr={type,song,index:0,controlIndex:0,start:ctx.currentTime+.08,active:[],bus,sampleBank};
     if(sampleBank){sampleBank.stopSong();tr.events=EK1MIDI.timeline(song);}
-    else {
+    {
       tr.channelBuses=Array.from({length:16},()=>{
         const gain=ctx.createGain(),pan=ctx.createStereoPanner?.();
         gain.gain.value=100/127;
@@ -611,6 +614,22 @@
     }
     return tr;
   }
+  // Only imported MIDI can be overridden; Song Builder and recorded takes
+  // keep their authored part assignments. Percussion always retains channel 10.
+  function followsMidiVoice(tr,n){
+    return tr.type==='midi'&&!tr.composing&&n.channel!==9&&(midiOverride==='all'||midiOverride===String(n.channel));
+  }
+  function localMidiVoice(tr,n,at,end,override){
+    const bus=tr.channelBuses[n.channel].gain,velocity=n.velocity/127*.23;
+    if(override&&engine==='fm')return EK1FM.voice(ctx,bus,n.key,at,Math.max(.01,end-at),fmIndex,fmSettings,velocity*EK1Levels.FM_GAIN);
+    return voice(n.key,at,Math.max(.01,end-at),override&&engine==='classic'?tone:EK1MIDI.toneFor(n.program),velocity,bus);
+  }
+  function applyMidiControl(tr,e,at){
+    const c=tr.channelBuses[e.channel];if(!c)return;
+    if(e.control===7)c.volume=e.value;else if(e.control===11)c.expression=e.value;
+    if(e.control===7||e.control===11)c.gain.gain.setTargetAtTime(c.volume*c.expression/(127*127),at,.005);
+    if(e.control===10&&c.pan)c.pan.pan.setTargetAtTime((e.value-64)/64,at,.005);
+  }
   function midiTick() {
     const tr=transport;
     if(paused||!tr||(tr.type!=='midi'&&!tr.sampleBank))return;
@@ -619,15 +638,24 @@
       // Dispatch a single chronological queue. Offs precede ons at a shared
       // tick; no early note-on can overtake a still-pending note-off.
       if(tr.localLead)tr.localLead=tr.localLead.filter(n=>n.end>now);
+      tr.active=tr.active.filter(n=>n.end>now);
       let work=0;
       while(tr.index<tr.events.length && tr.start+tr.events[tr.index].time<=now && work++<2048){
         const e=tr.events[tr.index++],n=e.note;
-        if(e.kind==='control'){tr.sampleBank.songControl(e);continue;}
+        if(e.kind==='control'){tr.sampleBank.songControl(e);applyMidiControl(tr,e,now);continue;}
         if(e.kind==='off'){tr.sampleBank.songOff(n);continue;}
         const end=tr.start+n.time+n.duration;
         if(end<=now||(tr.type==='demo'&&melodyOff&&n.channel===0))continue;
         if(tr.type==='demo'&&n.channel===0&&followDemoVoice&&engine!=='soundfont'){
           const sound=demoLeadSound(n.key,now,end-now,tr,EK1MIDI.toneFor(n.program),.25);tr.localLead.push({sound,end:end+.7});
+        }else if(followsMidiVoice(tr,n)){
+          if(engine==='soundfont'){
+            tr.sampleBank.songOn(n,bank.selected);
+            tr.lastOverride={channel:n.channel,engine,voice:$('tone').value};
+          }else if(tr.active.length<64){
+            const sound=localMidiVoice(tr,n,now,end,true);tr.active.push({sound,end:end+1.2});
+            tr.lastOverride={channel:n.channel,engine,voice:$('tone').value};
+          }
         }else tr.sampleBank.songOn(n,tr.type==='demo'&&n.channel===0&&followDemoVoice&&engine==='soundfont'?bank.selected:null);
         if(tr.type!=='demo'||n.channel===0)lamp(n.key,now,end-now,tr.type==='midi'?n.channel:-1);
       }
@@ -643,10 +671,7 @@
     }
     const controls=tr.song.controls||[];
     while(tr.controlIndex<controls.length&&tr.start+controls[tr.controlIndex].time<now+.135){
-      const e=controls[tr.controlIndex++],c=tr.channelBuses[e.channel],at=Math.max(now,tr.start+e.time);
-      if(e.control===7)c.volume=e.value;else if(e.control===11)c.expression=e.value;
-      if(e.control===7||e.control===11)c.gain.gain.setTargetAtTime(c.volume*c.expression/(127*127),at,.005);
-      if(e.control===10&&c.pan)c.pan.pan.setTargetAtTime((e.value-64)/64,at,.005);
+      const e=controls[tr.controlIndex++],at=Math.max(now,tr.start+e.time);applyMidiControl(tr,e,at);
     }
     tr.active=tr.active.filter(n=>n.end>now);
     let work=0;
@@ -657,8 +682,9 @@
       if(n.channel===9){
         if(at>=now-.12)drum(EK1MIDI.drumFor(n.key),begin,n.velocity/127*.55,channel);
       }else if(tr.active.length<64){
-        const sound=voice(n.key,begin,Math.max(.01,end-begin),EK1MIDI.toneFor(n.program),n.velocity/127*.23,channel);
-        tr.active.push({sound,end:end+.7});lamp(n.key,begin,Math.max(.01,end-begin),n.channel);
+        const override=followsMidiVoice(tr,n),sound=localMidiVoice(tr,n,begin,end,override);
+        if(override)tr.lastOverride={channel:n.channel,engine,voice:$('tone').value};
+        tr.active.push({sound,end:end+1.2});lamp(n.key,begin,Math.max(.01,end-begin),n.channel);
       }
     }
     if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');}
@@ -917,6 +943,7 @@
       else beginRhythm();
     });
     $('pause').addEventListener('click',togglePause);
+    $('midiOverride').addEventListener('change',()=>{midiOverride=$('midiOverride').value;if(transport?.type==='midi'&&!transport.composing)transport.lastOverride=null;reflectButtons();});
     $('demoFollow').addEventListener('change',()=>{followDemoVoice=$('demoFollow').checked;if(transport?.type==='demo'&&transport.sampleBank){transport.sampleBank.stopSongChannel(0);for(const n of transport.localLead||[])n.sound.release(ctx.currentTime);transport.localLead=[];}reflectButtons();});
     $('stop').addEventListener('click', () => {
       if (recording) endRecord();
@@ -972,7 +999,7 @@
     tones: TONES.length,
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
-    get state() { return { keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    get state() { return { midiOverride, lastMidiOverride:transport?.lastOverride||null, keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoArrangement,
     outputPeak(){if(!outputMeter)return 0;const samples=new Float32Array(outputMeter.fftSize);outputMeter.getFloatTimeDomainData(samples);return samples.reduce((peak,n)=>Math.max(peak,Math.abs(n)),0);},

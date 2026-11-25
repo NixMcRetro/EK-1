@@ -23,6 +23,9 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   await page.waitForFunction(()=>!!window.EK1Composer&&!!window.EK1AudioExport);
   await page.locator('.song-builder > summary').click();
   await page.locator('.compose-editor > summary').click();
+  assert(!(await page.locator('#composeTracks').isVisible()));
+  assert(!(await page.locator('#projectSave').isVisible()));
+  await page.locator('.compose-tools > summary').click();
   await page.locator('#composeStyle').selectOption('Ska');
   await page.locator('#composeBars').selectOption('4');
   await page.locator('#composeGenerate').click();

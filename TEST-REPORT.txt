@@ -25,3 +25,5 @@ LICENCE: original EK-1 application GPL-3.0-or-later; no deployment made.
 0.9.6 candidate: see CI for mapping, demo voice and pause/resume checks.
 
 0.9.7: see CI for nominal-signal linearity and demo playback regressions. Actual Safari headphone distortion remains unverified.
+
+0.9.8: see CI for MIDI voice override and utility layout regressions.

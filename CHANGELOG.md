@@ -2,6 +2,12 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.8] - MIDI voice override and layout consistency
+
+- Optional live MIDI voice override for all melodic channels or one selected channel; original MIDI remains the default.
+- Consistent left-aligned utility sections, control sizing, typography and spacing; mixer, note editor, project/audio and sound options remain collapsed by default.
+- Keep primary playback and generation controls visible in Song Builder; preserve the existing instrument faceplate and licence links.
+
 ## [0.9.7] - Demo audio headroom
 
 - Increase linear headroom before the emergency digital peak limiter; preserve the 25% startup volume and 0.35 maximum sample ceiling.

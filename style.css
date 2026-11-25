@@ -475,3 +475,43 @@ footer {
 @media(min-width:1200px) and (max-width:1350px){.rail-note{font-size:9px}}
 
 .demo-follow{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:12px}.demo-follow input{accent-color:#536853}#pause[aria-pressed=true]{background:#afc5b0;color:#17291a}
+
+/* Consistent utility area, deliberately separate from the instrument faceplate. */
+[hidden]{display:none!important}
+.song-builder,.midi-strip,.under-keyboard,footer{margin:18px 4px 0;text-align:left;font-family:Arial,Helvetica,sans-serif;color:#303933}
+.song-builder,.midi-strip{border:0;border-top:1px solid #a5aaa0;padding:13px 0 0}
+.midi-strip{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:9px}
+.midi-info h2,.song-builder>summary{font-size:13px;line-height:1.5;font-weight:800;letter-spacing:.05em;margin:0}
+.midi-info p,.midi-note,.compose-intro,.compose-hint,#composeStatus,.play-hint,.small-print,.song-builder>summary span{font-size:13px;line-height:1.5;text-align:left;margin:0;overflow-wrap:anywhere}
+.midi-info p{margin-top:3px}
+.compose-intro,.compose-hint,#composeStatus{margin:8px 0}
+.midi-controls,.compose-actions,.sound-options-row,.compose-export-settings{display:flex;justify-content:flex-start;align-items:end;flex-wrap:wrap;gap:8px}
+.midi-controls button,.song-builder button,.sound-options button{font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.02em;line-height:1.25;min-height:38px;padding:8px 12px;border:1px solid #697369;border-bottom:3px solid #697369;border-radius:3px;background:#f0eee4;color:#28322a;cursor:pointer}
+.midi-controls button:disabled,.song-builder button:disabled,.sound-options button:disabled{opacity:.48;cursor:default}
+.sound-options button:hover:not(:disabled){background:#fffdf4}
+.sound-options button[aria-pressed=true],.song-builder .section-chip[aria-pressed=true]{background:#536853;color:#fff}
+.song-builder select,.song-builder input[type=number],.sound-options select,.midi-voice-options select{font:400 13px Arial,Helvetica,sans-serif;color:#28322a;background:#f0eee4;border:1px solid #697369;border-radius:3px;min-height:38px;padding:6px 8px;max-width:100%;min-width:0}
+.sound-options label,.compose-settings label,.compose-export-settings label,.midi-voice-options label,.section-actions label{font-size:11px;font-weight:800;letter-spacing:.03em;line-height:1.4}
+.compose-settings{grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px}
+.compose-settings button{width:100%}
+.compose-actions label,.midi-voice-options label{display:grid;gap:4px;min-width:0}
+.midi-voice-options{display:grid;justify-items:start;gap:5px}
+.midi-voice-options select{min-width:min(240px,100%)}
+.sound-options,.compose-editor,.utility-disclosure{border:0;border-top:1px solid #b4b9ae;margin:10px 0 0;padding:8px 0 0;font-size:13px;color:#374437}
+.sound-options>summary,.compose-editor>summary,.utility-disclosure>summary{font-size:13px;font-weight:700;line-height:1.5;letter-spacing:0;cursor:pointer;padding:2px 0}
+.sound-options-row{margin:9px 0;align-items:end}
+.sound-options-row label{min-width:150px;max-width:100%}
+.sound-options .demo-follow,.compose-scroll{font-size:13px;font-weight:400;letter-spacing:0}
+.compose-overview-heading{font-size:11px}
+.compose-table{font-size:12px;min-width:480px}
+.compose-table thead th{font-size:11px}
+.compose-table td>select+select{font-size:12px}
+.compose-table select{font-size:12px;min-height:34px}
+.compose-table th:first-child{width:60px}
+.compose-part label,.compose-part span,.mix-control{font-size:12px}
+.midi-legend{font-size:12px;line-height:1.5}
+#demoSound{font-size:13px}
+.under-keyboard{max-width:none;border-top:1px solid #a5aaa0;padding-top:12px}
+.under-keyboard p,footer p{margin:4px 0;text-align:left}
+footer{border-top:1px solid #a5aaa0;padding:12px 0 16px;font-size:12px;line-height:1.5}
+@media(max-width:760px){.song-builder,.midi-strip,.under-keyboard,footer{margin-inline:4px}.compose-settings{grid-template-columns:repeat(2,minmax(0,1fr))}.midi-controls button,.song-builder button,.sound-options button{min-height:44px}.midi-controls button{flex:0 1 auto}.sound-options-row label{flex:1 1 145px}.compose-overview-heading{align-items:flex-start}.compose-table{min-width:480px}}

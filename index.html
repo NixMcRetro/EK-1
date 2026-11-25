@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
   <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twenty built-in voices, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.9.7</title>
+  <title>Electronic Keyboard (Model EK-1) v0.9.8</title>
   <link rel="stylesheet" href="./style.css">
   <script src="./midi.js" defer></script>
   <script src="./vendor/spessasynth-local.js" defer></script>
@@ -32,7 +32,7 @@
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
         <span class="product-spec">49 KEYS - DIGITAL SOUND</span>
-        <span class="version">v0.9.7</span>
+        <span class="version">v0.9.8</span>
       </div>
     </header>
 
@@ -146,18 +146,19 @@
       <button type="button" id="composeGenerate">NEW ARRANGEMENT</button>
     </div>
     <p class="compose-hint">Key, chord pattern and length are applied by NEW ARRANGEMENT, which replaces the current notes. Style, tempo and feel apply at playback. Natural adds subtle groove; Expressive adds stronger variation; Original retains the earlier arrangement engine.</p>
-    <div id="composeTracks" class="compose-tracks" aria-label="Song parts"></div>
-    <div class="compose-overview"><div class="compose-overview-heading"><span>SONG STRUCTURE <output id="composeLengthReadout"></output></span><div><button id="composeUndo" type="button" disabled>UNDO</button> <button id="composeRedo" type="button" disabled>REDO</button></div></div><div id="composeSections" aria-label="Song sections"></div></div>
-    <details class="compose-editor"><summary>Edit chords and melody</summary>
-    <div class="compose-table-wrap"><table class="compose-table"><thead><tr><th>BAR</th><th>CHORD</th><th>BEAT 1</th><th>BEAT 2</th><th>BEAT 3</th><th>BEAT 4</th></tr></thead><tbody id="composeRows"></tbody></table></div></details>
     <div class="compose-actions"><button id="composePlay" type="button">PLAY SONG</button><button id="composeMelody" type="button" title="Keep the chord progression and replace the melody">NEW MELODY</button><button id="composeHarmony" type="button">NEW CHORDS + MELODY</button><button id="composeSave" type="button">EXPORT SONG MIDI</button></div>
     <label class="compose-scroll"><input type="checkbox" id="composeReturn" checked> Return to keyboard on playback</label>
+    <details class="compose-mixer utility-disclosure"><summary>Instruments and mixer</summary><div id="composeTracks" class="compose-tracks" aria-label="Song parts"></div></details>
+    <div class="compose-overview"><div class="compose-overview-heading"><span>SONG STRUCTURE <output id="composeLengthReadout"></output></span><div><button id="composeUndo" type="button" disabled>UNDO</button> <button id="composeRedo" type="button" disabled>REDO</button></div></div><div id="composeSections" aria-label="Song sections"></div><div class="compose-actions section-actions"><label>SECTION <select id="sectionType"><option>Intro</option><option selected>Verse</option><option>Chorus</option><option>Bridge</option><option>Ending</option></select></label><button id="appendSection" type="button">APPEND SECTION</button><button id="composeDuplicate" type="button" title="Duplicate the selected section directly after itself">DUPLICATE SECTION</button><button id="removeSection" type="button">REMOVE LAST SECTION</button></div></div>
+    <details class="compose-editor"><summary>Edit chords and melody</summary>
+    <div class="compose-table-wrap"><table class="compose-table"><thead><tr><th>BAR</th><th>CHORD</th><th>BEAT 1</th><th>BEAT 2</th><th>BEAT 3</th><th>BEAT 4</th></tr></thead><tbody id="composeRows"></tbody></table></div></details>
+    
     <p class="compose-hint">NEW MELODY keeps your chords. NEW CHORDS + MELODY selects a different chord pattern and generates a matching melody, keeping the song length, sections, instruments and tempo.</p>
-    <div class="compose-tools"><h3>PROJECT &amp; AUDIO</h3>
-      <div class="compose-actions"><button id="projectSave" type="button">SAVE PROJECT</button><button id="projectOpen" type="button">OPEN PROJECT</button><input id="projectFile" type="file" accept=".ek1,application/json" hidden><label>SECTION <select id="sectionType"><option>Intro</option><option selected>Verse</option><option>Chorus</option><option>Bridge</option><option>Ending</option></select></label><button id="appendSection" type="button">APPEND SECTION</button><button id="composeDuplicate" type="button" title="Duplicate the selected section directly after itself">DUPLICATE SECTION</button><button id="removeSection" type="button">REMOVE LAST SECTION</button></div>
+    <details class="compose-tools utility-disclosure"><summary>Project and audio export</summary>
+      <div class="compose-actions"><button id="projectSave" type="button">SAVE PROJECT</button><button id="projectOpen" type="button">OPEN PROJECT</button><input id="projectFile" type="file" accept=".ek1,application/json" hidden></div>
       <div class="compose-export-settings"><label>FORMAT <select id="audioFormat"><option value="wav">WAV (lossless)</option><option value="mp3">MP3 (compressed)</option></select></label><label>SAMPLE RATE <select id="audioRate"><option value="44100">44.1 kHz</option><option value="48000">48 kHz</option></select></label><label id="wavBitsLabel">BIT DEPTH <select id="audioBits"><option value="16">16-bit</option><option value="24">24-bit</option></select></label><label id="mp3RateLabel" hidden>BITRATE <select id="mp3Rate"><option value="128">128 kbps</option><option value="192">192 kbps</option><option value="256">256 kbps</option><option value="320" selected>320 kbps</option></select></label><button id="exportAudio" type="button">EXPORT AUDIO</button></div>
       <button type="button" id="cancelExport" hidden>CANCEL EXPORT</button><progress id="audioProgress" max="1" value="0" hidden aria-label="Audio export progress"></progress><p class="compose-hint">Audio uses the loaded SoundFont, or Classic sounds if none is loaded. MP3 uses the bundled LAME encoder. Projects store notes and settings, not the SoundFont file.</p>
-    </div>
+    </details>
     <p id="composeStatus" role="status" aria-live="polite">Your first arrangement is ready to play. Changes are kept until you close or reload the page.</p>
   </details>
   <section class="midi-strip" aria-labelledby="midiHeading">
@@ -172,8 +173,9 @@
       <button id="saveMidi" type="button" disabled>SAVE MIDI COPY</button>
       <button id="exportTake" type="button" disabled>EXPORT RECORDING</button>
     </div>
+    <div id="midiVoiceOptions" class="midi-voice-options" hidden><label for="midiOverride">MIDI VOICE <select id="midiOverride"><option value="original">Original instruments</option></select></label><p class="midi-note">Choose which melodic channels follow VOICE. Changes apply to the next notes, without restarting playback.</p></div>
     <div id="midiLegend" class="midi-legend" aria-label="MIDI channel colours" hidden></div>
-    <p class="midi-note">MIDI colours identify channels; a split key means multiple channels share that pitch. Percussion and notes outside C3-C7 are not highlighted. MIDI stores notes, not audio. Imported songs use built-in approximations or the selected SoundFont bank.</p>
+    <p class="midi-note">Key colours identify MIDI channels. Shared pitches show split colours; percussion and out-of-range notes are not lit.</p>
   </section>
 
   <section class="midi-strip soundfont-strip" aria-labelledby="bankHeading">
@@ -182,22 +184,22 @@
       <input id="bankFile" type="file" accept=".sf2,.sf3" hidden>
       <button id="openBank" type="button">OPEN SOUNDFONT</button>
       <button id="closeBank" type="button" disabled>REMOVE SOUNDFONT</button>
-      <span id="demoSound" role="status" aria-live="polite">Demo playback: Classic</span>
     </div>
+    <p id="demoSound" class="midi-note" role="status" aria-live="polite">Demo playback: Classic</p>
     <details class="sound-options"><summary>Sound options</summary>
       <div class="sound-options-row"><button id="favouriteVoice" type="button" aria-pressed="false">FAVOURITE CURRENT VOICE</button><label>FAVOURITES <select id="favouriteList" disabled aria-label="Favourite instruments"><option value="">No favourites yet</option></select></label></div>
       <div class="sound-options-row"><label>ROOM REVERB <output id="effect-reverbValue" for="effect-reverb">0%</output><input id="effect-reverb" type="range" min="0" max="100" value="0"></label><label>CHORUS <output id="effect-chorusValue" for="effect-chorus">0%</output><input id="effect-chorus" type="range" min="0" max="100" value="0"></label></div>
       <label class="demo-follow"><input type="checkbox" id="demoFollow" checked> Demo melody follows selected voice</label>
-      <p class="midi-note">Uncheck to hear the original demo instruments. Bass, chords and percussion keep their own sounds. Effects are off by default and apply to playback and WAV/MP3 export, not MIDI. Favourites and effects are session-only; changing or removing a SoundFont clears its favourites.</p>
+      <p class="midi-note">Effects apply to playback and audio exports, not MIDI. Favourites and effects are session-only. Replacing a SoundFont clears its favourites.</p>
     </details>
     <p class="midi-note">Recommended: <a href="https://www.pianobooster.org/download.html" target="_blank" rel="noopener noreferrer">FluidR3 GM</a> by Frank Wen (external download, 148 MB, MIT). Download the SF2 file separately, extract if necessary, then choose OPEN SOUNDFONT. No banks are included or fetched automatically.</p>
-    <p class="midi-note">Classic, FM and loaded SoundFont voices share the keyboard's VOICE menu. MIDI songs and demo backing use the loaded SoundFont, if present. The demo melody follows VOICE by default; change this in Sound options. MELODY OFF mutes the demo lead for play-along. STOP also silences held SoundFont notes.</p>
+
   </section>
   <div class="under-keyboard">
     <p class="play-hint"><strong>Just play.</strong> Use the keys above, or your computer keyboard: <kbd>C</kbd> = A3, <kbd>V</kbd> = B3, <kbd>B</kbd> = middle C, <kbd>N</kbd> = D4. The two rows continue from F3 to E5. Use <kbd>,</kbd> and <kbd>.</kbd> to shift the computer keyboard by an octave.</p>
     <p class="small-print">Choose a voice and play, or press DEMO for one of five original songs. AUTO CHORD uses the lowest octave. Recording is temporary until you close or reload the page.</p>
   </div>
-  <footer>Electronic Keyboard - Model EK-1 - An original browser instrument inspired by classic home keyboards. Not affiliated with Casio or Yamaha. - MP3 encoding: <a href="https://lame.sourceforge.io/">LAME</a> / <a href="https://github.com/zhuker/lamejs">lamejs 1.2.1</a> (LGPL). <a href="THIRD-PARTY-NOTICES.txt">Licences and credits</a>. Encoder source is included in the offline ZIP. <span>Original EK-1 code &copy; 2026 NixMcRetro and contributors. You may redistribute it under <a href="LICENSE">GPL-3.0-or-later</a>; provided without warranty. <a href="https://github.com/NixMcRetro/EK-1">Source code</a>.</span></footer>
+  <footer><p>Electronic Keyboard - Model EK-1 - &copy; 2026 NixMcRetro and contributors.</p><p>Original application: <a href="LICENSE">GPL-3.0-or-later</a>, without warranty. <a href="https://github.com/NixMcRetro/EK-1">Source code</a> - <a href="THIRD-PARTY-NOTICES.txt">Licences and credits</a>.</p><p>MP3 encoding: <a href="https://lame.sourceforge.io/">LAME</a> / <a href="https://github.com/zhuker/lamejs">lamejs 1.2.1</a> (LGPL). Encoder source included in the offline ZIP. Not affiliated with Casio or Yamaha.</p></footer>
 </main>
 </body>
 </html>
