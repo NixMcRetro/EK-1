@@ -474,13 +474,21 @@
   }
   function scheduleStep() {
     if (!transport) return;
-    const tr = transport, step = tr.step, at = tr.nextTime, beat = 60 / tr.bpm;
+    const tr = transport, beat = 60 / tr.bpm;
+    let step=tr.step,at=tr.nextTime;
     if (tr.type === 'demo') {
       const song = SONGS[tr.song];
       if (step >= song.bars * STEPS_PER_BAR) {
-        if (loop) { clearInterval(loop); loop = null; }
-        if (!endTimer) endTimer = clockTimer(at+($('demoLoop').checked?.15:.65),()=>finishDemo(tr));
-        return false;
+        if($('demoLoop').checked){
+          // Keep the same bus and audio-clock grid. Existing envelopes and
+          // release tails naturally overlap the first beat of the next pass.
+          tr.repeatCount++;tr.start=tr.origin+tr.repeatCount*song.bars*4*beat;
+          tr.step=step=0;tr.nextTime=at=tr.start;
+        }else{
+          if(loop){clearInterval(loop);loop=null;}
+          if(!endTimer)endTimer=clockTimer(at+.65,()=>finishDemo(tr));
+          return false;
+        }
       }
       drumsForStep(step, at, song.rhythm, tr.backingBus);
       const chord = chordInfo(song.chords[Math.floor(step / 16) % song.chords.length]);
@@ -512,7 +520,7 @@
       }
     }
     tr.step++;
-    tr.nextTime += beat / 4;
+    tr.nextTime = tr.type==='demo'?tr.start+tr.step*beat/4:tr.nextTime+beat/4;
     return true;
   }
   function tick() {
@@ -547,10 +555,11 @@
     const song=SONGS[index];
     if(bank){
       transport=makeMidiTransport('demo',demoArrangement(index),bank,createBus());
-      transport.demoIndex=index;transport.demoBar=1;transport.repeatCount=repeatCount;transport.localLead=[];transport.bus.gain.value=.70;backingBus(transport);updateBacking();
+      transport.demoIndex=index;transport.demoBar=1;transport.repeatCount=repeatCount;transport.origin=transport.start;transport.localLead=[];transport.bus.gain.value=.70;backingBus(transport);updateBacking();
       loop=setInterval(midiTick,25);reflectButtons();demoDisplay(transport,1);midiTick();
     }else{
-      transport={type:'demo',song:index,step:0,nextTime:ctx.currentTime+.08,bpm:song.tempo,bus:createBus(),repeatCount};
+      const start=ctx.currentTime+.08;
+      transport={type:'demo',song:index,step:0,start,origin:start,nextTime:start,bpm:song.tempo,bus:createBus(),repeatCount};
       transport.bus.gain.value=.70;backingBus(transport);
       loop=setInterval(tick,25);reflectButtons();demoDisplay(transport,1);tick();
     }
@@ -756,7 +765,16 @@
         const bar=Math.min(16,1+Math.floor(Math.max(0,now-tr.start)/(240/SONGS[tr.demoIndex].tempo)));
         if(bar!==tr.demoBar){tr.demoBar=bar;demoDisplay(tr,bar);}
       }
-      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+((repeatMidi(tr)||(tr.type==='demo'&&$('demoLoop').checked))?.15:.7)){
+      if(tr.type==='demo'&&$('demoLoop').checked&&tr.index===tr.events.length&&now>=tr.start+tr.song.duration){
+        // All authored note-offs precede the boundary. Advance the timeline
+        // without resetting the synthesizer or adding any restart delay.
+        // Skip whole elapsed cycles if the browser has been throttled.
+        tr.repeatCount+=Math.max(1,Math.floor((now-tr.start)/tr.song.duration));
+        tr.start=tr.origin+tr.repeatCount*tr.song.duration;
+        tr.index=0;tr.demoBar=1;demoDisplay(tr,1);
+        midiTick();return;
+      }
+      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+(repeatMidi(tr)?.15:.7)){
         if(tr.type==='midi'){finishMidi(tr);return;}
         if(tr.type==='demo'){finishDemo(tr);return;}
         stopTransport(false);show('PLAYBACK FINISHED','PRESS PLAY TO REPEAT');
@@ -1098,7 +1116,7 @@
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
     returnToKeyboard,
-    get state() { return { demoLoop:$('demoLoop').checked,demoRepeats:transport?.type==='demo'?(transport.repeatCount||0):0,backingVolume, accompanimentEngine:transport?.type==='rhythm'?(transport.sampleBank?'soundfont':'classic'):null, backingSampleKeys:bank?[1,2,3,9].reduce((sum,c)=>sum+bank.songChannelKeys(c),0):0, sampleChordKeys:bank?.songChannelKeys(1)||0,sampleBassKeys:bank?.songChannelKeys(2)||0,sampleDrumKeys:bank?.songChannelKeys(9)||0,midiLoop:$('midiLoop').checked,midiRepeats:transport?.repeatCount||0,midiOverride, lastMidiOverride:transport?.lastOverride||null, keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    get state() { return { demoLoop:$('demoLoop').checked,demoRepeats:transport?.type==='demo'?(transport.repeatCount||0):0,demoCycleStart:transport?.type==='demo'?transport.start:null,backingVolume, accompanimentEngine:transport?.type==='rhythm'?(transport.sampleBank?'soundfont':'classic'):null, backingSampleKeys:bank?[1,2,3,9].reduce((sum,c)=>sum+bank.songChannelKeys(c),0):0, sampleChordKeys:bank?.songChannelKeys(1)||0,sampleBassKeys:bank?.songChannelKeys(2)||0,sampleDrumKeys:bank?.songChannelKeys(9)||0,midiLoop:$('midiLoop').checked,midiRepeats:transport?.repeatCount||0,midiOverride, lastMidiOverride:transport?.lastOverride||null, keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoArrangement,
     outputRms(){if(!outputMeter)return 0;const samples=new Float32Array(outputMeter.fftSize);outputMeter.getFloatTimeDomainData(samples);return Math.sqrt(samples.reduce((sum,n)=>sum+n*n,0)/samples.length);},

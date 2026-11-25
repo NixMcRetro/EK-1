@@ -9,6 +9,11 @@ try{
  const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(pathToFileURL(resolve('index.html')).href);
  assert(await page.locator('#demoLoop').isChecked());
+ for(let i=0;i<5;i++){
+   const score=await page.evaluate(i=>EK1.demoArrangement(i),i);
+   assert(score.notes.every(n=>n.time>=0&&n.time+n.duration<=score.duration+1e-8),'All note-offs fit demo period '+i);
+   assert(score.notes.some(n=>n.time===0),'First beat present '+i);
+ }
  for(const sampled of [false,true]){
    if(sampled){await page.locator('#bankFile').setInputFiles({name:'fixture.sf2',mimeType:'application/octet-stream',buffer:testSoundFont()});await page.waitForFunction(()=>EK1.state.soundfont&&!EK1.state.bankLoading);}
    await page.locator('#demoLoop').check();
@@ -19,8 +24,10 @@ try{
    await page.locator('#playDemo').click();
    await page.waitForFunction(()=>EK1.state.transport==='demo');
    assert.equal(await page.evaluate(()=>EK1.state.demoRepeats),0);
+   const first=await page.evaluate(()=>({start:EK1.state.demoCycleStart,period:EK1.demoArrangement(3).duration}));
    await page.waitForFunction(()=>EK1.state.demoRepeats===1,{},{timeout:45000});
    const state=await page.evaluate(()=>EK1.state);
+   assert(Math.abs(state.demoCycleStart-first.start-first.period)<1e-7,'No added delay at musical boundary');
    assert.equal(state.demoIndex,3);assert.equal(state.demoEngine,sampled?'soundfont':'classic');
    assert.equal(state.engine,sampled?'soundfont':'fm');assert.equal(state.backingVolume,.65);assert(state.melodyOff);
    if(sampled)assert.equal(state.demoLeadKeys,0);

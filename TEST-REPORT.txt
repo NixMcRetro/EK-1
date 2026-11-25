@@ -37,3 +37,5 @@ LICENCE: original EK-1 application GPL-3.0-or-later; no deployment made.
 1.0.1: see CI for sampled accompaniment, backing mute, RMS and peak checks. Actual FluidR3 and native Safari listening tests remain outstanding.
 
 1.0.1 initial audio-balance revision passed full CI (45578901127). The demo loop follow-up adds real-time repeat and one-shot completion checks for Classic and sampled playback.
+
+1.0.1 demo-loop revision passed CI (45580702373). Follow-up verifies all five scores fit their loop period, exact scheduled loop origin, and reduced FM RMS for all eight presets. Actual sample callback timing and subjective balance in Safari remain unverified.
