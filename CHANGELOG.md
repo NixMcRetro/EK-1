@@ -2,7 +2,22 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
-## [0.2.0] - Unreleased
+## [0.3.0] - Unreleased
+
+### Added
+- Local Standard MIDI File format 0 and 1 import with multichannel playback, tempo changes, sustain and program approximations.
+- MIDI recording export and byte-identical copies of imported MIDI files.
+- Bounded parser and playback scheduler; codec and browser regression tests.
+
+### Changed
+- Computer keyboard shortcuts remain playable after using transport buttons.
+- Compact MIDI utility controls below the keyboard, without changing the instrument design.
+
+### Limitations
+- MIDI playback uses twelve original synthesized sounds, not a full General MIDI SoundFont.
+- Export saves performed notes only. Song editing, hardware MIDI and full controller support are deferred.
+
+## [0.2.0] - Verified development baseline
 
 ### Changed
 - Replaced the card-based web application layout with one physical keyboard-inspired faceplate.
