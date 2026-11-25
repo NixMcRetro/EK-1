@@ -18,6 +18,10 @@ try{
  assert.equal(await page.evaluate(()=>EK1.state.engine),'soundfont');
  assert.equal(await page.locator('#tone option').count(),21);
  await page.locator('#tone').selectOption('sf-0');
+ await page.locator('.sound-options > summary').click();await page.locator('#favouriteVoice').click();
+ assert.equal(await page.locator('#favouriteList option').count(),2);
+ await page.locator('#tone').selectOption('0');await page.locator('#favouriteList').selectOption('sf-0');
+ assert.equal(await page.evaluate(()=>EK1.state.engine),'soundfont');
  await page.locator('#keys [data-midi="69"]').focus();
  await page.keyboard.down('z');
  await page.waitForFunction(()=>EK1.state.sampleVoices>0);
@@ -64,7 +68,17 @@ try{
  await page.locator('#bankFile').setInputFiles({name:'broken.sf2',mimeType:'application/octet-stream',buffer:Buffer.from([1,2,3])});
  await page.waitForFunction(()=>document.querySelector('#bankStatus').textContent.includes('Could not open'));
  assert(await page.evaluate(()=>EK1.state.soundfont));
+ const sampled=await page.evaluate(async()=>{
+  const bytes=EK1Composer.encode(EK1Composer.create(0,'Bright',4,'Ska','Natural'));
+  const dry=await EK1.renderComposition(bytes,44100,()=>{});
+  const slider=document.querySelector('#effect-reverb');slider.value='100';slider.dispatchEvent(new Event('input',{bubbles:true}));
+  const wet=await EK1.renderComposition(bytes,44100,()=>{});
+  let peak=0,diff=0;for(let i=0;i<wet.left.length;i++){peak=Math.max(peak,Math.abs(wet.left[i]),Math.abs(wet.right[i]));diff+=Math.abs(wet.left[i]-dry.left[i]);}
+  return {peak,diff,length:wet.left.length};
+ });
+ assert(sampled.peak>0&&sampled.peak<=.3501&&sampled.diff>0,'sampled effects export: '+JSON.stringify(sampled));
  await page.locator('#closeBank').click();
+ assert.equal(await page.locator('#favouriteList option').count(),1);
  assert.equal(await page.evaluate(()=>EK1.state.soundfont),false);
  assert.equal(await page.evaluate(()=>EK1.state.engine),'classic');
  assert.equal(await page.locator('#tone option').count(),20);

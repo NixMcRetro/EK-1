@@ -20,7 +20,7 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
  const levels=await page.evaluate(async()=>{
   const results=[];
   for(const volume of [.25,0]){
-   const c=new OfflineAudioContext(2,24000,48000),stage=EK1Levels.create(c,c.destination,volume);
+   const c=new OfflineAudioContext(2,24000,48000),stage=EK1Levels.create(c,c.destination,volume,{reverb:1,chorus:1});
    const a=c.createOscillator(),b=c.createOscillator(),g=c.createGain();a.frequency.value=220;b.frequency.value=440;g.gain.value=5;
    a.connect(g);b.connect(g);g.connect(stage.input);a.start();b.start();const out=await c.startRendering();
    results.push(Math.max(...[0,1].map(ch=>out.getChannelData(ch).reduce((p,n)=>Math.max(p,Math.abs(n)),0))));

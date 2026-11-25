@@ -25,6 +25,8 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   await page.locator('#composeBars').selectOption('4');
   await page.locator('#composeGenerate').click();
   assert.equal(await page.locator('#composeRows tr').count(),4);
+  assert.equal(await page.locator('#composeLengthReadout').innerText(),'4 bars');
+  assert.equal(await page.locator('#composeSections button').count(),1);
   const download=async id=>{
    const event=page.waitForEvent('download',{timeout:90000});
    await page.locator(id).click();
@@ -37,8 +39,22 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   const project=await download('#projectSave');
   assert.equal(JSON.parse(project).song.bars.length,4);
   assert.equal(JSON.parse(project).song.feel,'Expressive');
+  await page.locator('#composeDuplicate').click();
+  assert.equal(await page.locator('#composeRows tr').count(),8);
+  const duplicated=JSON.parse(await download('#projectSave')).song;
+  assert.deepEqual(duplicated.bars.slice(0,4),duplicated.bars.slice(4));
+  await page.locator('#composeUndo').click();assert.equal(await page.locator('#composeRows tr').count(),4);
+  await page.locator('#composeRedo').click();assert.equal(await page.locator('#composeRows tr').count(),8);
+  await page.locator('#composeUndo').click();assert.equal(await page.locator('#composeRows tr').count(),4);
   await page.locator('#appendSection').click();
   assert.equal(await page.locator('#composeRows tr').count(),8);
+  assert(await page.locator('#composeRedo').isDisabled());
+  assert.equal(await page.locator('#composeSections button').count(),2);
+  await page.locator('.compose-editor > summary').click();
+  assert(!(await page.locator('#composeRows').isVisible()));
+  await page.locator('#composeSections button').first().click();
+  assert(await page.locator('#composeRows').isVisible());
+
   await page.locator('#projectFile').setInputFiles({name:'test.ek1',mimeType:'application/json',buffer:project});
   await page.waitForFunction(()=>document.querySelector('#composeStatus').textContent.includes('Project opened.'));
   assert.equal(await page.locator('#composeRows tr').count(),4);
@@ -49,7 +65,14 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   await page.locator('#composeFeel').selectOption('Natural');
   const chords=()=>page.locator('#composeRows tr td:first-of-type select:first-child').evaluateAll(els=>els.map(el=>el.value));
   const before=await chords();await page.locator('#composeMelody').click();assert.deepEqual(await chords(),before);
-  await page.locator('#composeHarmony').click();assert.notDeepEqual(await chords(),before);
+  await page.locator('#composeHarmony').click();const after=await chords();assert.notDeepEqual(after,before);
+  await page.locator('#composeUndo').click();assert.deepEqual(await chords(),before);
+  await page.locator('#composeRedo').click();assert.deepEqual(await chords(),after);
+  await page.locator('#composeUndo').click();
+  const first=page.locator('#composeRows tr td:first-of-type select:first-child').first();
+  await first.selectOption(String((Number(await first.inputValue())+1)%7));
+  assert(await page.locator('#composeRedo').isDisabled());await page.locator('#composeUndo').click();
+  assert.deepEqual(await chords(),before);
   assert(await page.locator('#composeReturn').isChecked());
   await page.locator('#composePlay').click();
   await page.waitForFunction(()=>EK1.state.composing);
@@ -59,6 +82,16 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   await page.waitForFunction(()=>EK1.state.composing);assert(await page.locator('#composePlay').evaluate(el=>document.activeElement===el)||!(await page.locator('.keyboard-scroll').evaluate(el=>document.activeElement===el)));
   await page.locator('#stop').click();
   await page.waitForFunction(()=>EK1.state.transport==='stopped');
+  assert(!(await page.locator('#effect-reverb').isVisible()));
+  await page.locator('.sound-options > summary').click();
+  await page.locator('#tone').selectOption('0');await page.locator('#favouriteVoice').click();
+  await page.locator('#tone').selectOption('fm-2');await page.locator('#favouriteVoice').click();
+  await page.locator('#favouriteList').selectOption('0');
+  assert.equal(await page.evaluate(()=>EK1.state.engine),'classic');
+  await page.locator('#favouriteVoice').click();
+  assert.equal(await page.locator('#favouriteList option').count(),2);
+  await page.locator('#favouriteList').selectOption('fm-2');
+  assert.equal(await page.evaluate(()=>EK1.state.engine),'fm');
   await page.locator('#audioRate').selectOption('48000');
   await page.locator('#audioBits').selectOption('24');
   const wav=await download('#exportAudio');
@@ -67,6 +100,9 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   assert.equal(wav.readUInt32LE(24),48000);
   assert.equal(wav.readUInt16LE(34),24);
   assert(wav.length>44);
+  await page.locator('#effect-reverb').evaluate(el=>{el.value='100';el.dispatchEvent(new Event('input',{bubbles:true}));});
+  await page.locator('#effect-chorus').evaluate(el=>{el.value='100';el.dispatchEvent(new Event('input',{bubbles:true}));});
+  const wet=await download('#exportAudio');assert.equal(wav.length,wet.length);assert(!wav.equals(wet),'effects must change rendered audio');
   await page.locator('#audioFormat').selectOption('mp3');
   await page.locator('#mp3Rate').selectOption('320');
   const mp3=await download('#exportAudio');
