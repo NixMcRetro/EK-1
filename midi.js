@@ -50,7 +50,7 @@
           if(type===9&&b)add({kind:'on',channel,key:a,velocity:b});
           else if(type===8||type===9)add({kind:'off',channel,key:a});
           else if(type===12)add({kind:'program',channel,program:a});
-          else if(type===11&&[64,120,123].includes(a))add({kind:'control',channel,control:a,value:b});
+          else if(type===11&&[0,32,64,120,123].includes(a))add({kind:'control',channel,control:a,value:b});
         }else throw Error('Unsupported MIDI event.');
       }
       if(!seenEnd)throw Error('MIDI track is missing its end marker.');
@@ -58,7 +58,7 @@
       p=end;
     }
     events.sort((a,b)=>a.tick-b.tick||a.serial-b.serial);
-    const states=Array.from({length:16},()=>({program:0,sustain:false,held:new Map(),deferred:[]}));
+    const states=Array.from({length:16},()=>({program:0,bankMSB:0,bankLSB:0,sustain:false,held:new Map(),deferred:[]}));
     const notes=[];
     let tick=0,time=0,us=500000;
     const advance=to=>{time+=(to-tick)*us/(division*1e6);tick=to;if(time>MAX_SECONDS)throw Error('MIDI playback is limited to 30 minutes.');};
@@ -75,12 +75,14 @@
       if(e.kind==='program')ch.program=e.program;
       else if(e.kind==='on'){
         if(!ch.held.has(e.key))ch.held.set(e.key,[]);
-        ch.held.get(e.key).push({time,key:e.key,velocity:e.velocity,channel:e.channel,program:ch.program,track:e.track});
+        ch.held.get(e.key).push({time,key:e.key,velocity:e.velocity,channel:e.channel,program:ch.program,bankMSB:ch.bankMSB,bankLSB:ch.bankLSB,track:e.track});
       }else if(e.kind==='off'){
         const stack=ch.held.get(e.key);
         if(stack?.length){const n=stack.shift();if(!stack.length)ch.held.delete(e.key);if(ch.sustain)ch.deferred.push(n);else finish(n,time);}
       }else if(e.kind==='control'){
-        if(e.control===64){
+        if(e.control===0)ch.bankMSB=e.value;
+        else if(e.control===32)ch.bankLSB=e.value;
+        else if(e.control===64){
           const down=e.value>=64;
           if(ch.sustain&&!down){for(const n of ch.deferred)finish(n,time);ch.deferred=[];}
           ch.sustain=down;
@@ -120,8 +122,10 @@
     const channelFor=t=>t>=9?t+1:t;
     for(const n of take){
       if(!Number.isFinite(n.t)||n.t<0||!Number.isFinite(n.length)||n.length<=0||!Number.isInteger(n.midi)||n.midi<0||n.midi>127||!Number.isInteger(n.tone)||n.tone<0||n.tone>=programs.length)throw Error('Invalid recorded note.');
+      const program=n.program??programs[n.tone], msb=n.bankMSB??0, lsb=n.bankLSB??0;
+      if(![program,msb,lsb].every(x=>Number.isInteger(x)&&x>=0&&x<=127))throw Error('Invalid recorded patch.');
       const c=channelFor(n.tone), a=Math.round(n.t*960), b=Math.max(a+1,Math.round((n.t+n.length)*960));
-      if(!used.has(c)){used.add(c);ev.push({tick:0,order:-1,data:[0xc0|c,programs[n.tone]]});}
+      if(!used.has(c)){used.add(c);ev.push({tick:0,order:-1,data:[0xb0|c,0,msb]},{tick:0,order:-1,data:[0xb0|c,32,lsb]},{tick:0,order:-1,data:[0xc0|c,program]});}
       ev.push({tick:a,order:1,data:[0x90|c,n.midi,96]},{tick:b,order:0,data:[0x80|c,n.midi,0]});
     }
     if(!used.size)throw Error('Record some notes first.');
