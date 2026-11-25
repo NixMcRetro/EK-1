@@ -1,4 +1,4 @@
-// Electronic Keyboard (Model EK-1) v0.4.0 browser regression.
+// Electronic Keyboard (Model EK-1) v0.5.0 browser regression.
 // Run with: node .github/tests/ek1-browser-smoke.mjs
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
@@ -18,7 +18,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(url, {waitUntil:'load'});
       await page.waitForFunction(() => !!window.EK1);
-      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.4\.0/);
+      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.5\.0/);
       const info = await page.evaluate(() => ({
         version: EK1.version,
         tones: EK1.tones,
@@ -27,7 +27,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         bars: Array.from({length:EK1.demos}, (_,i) => EK1.demoBars(i)),
         events: Array.from({length:EK1.demos}, (_,i) => EK1.demoEvents(i))
       }));
-      assert.equal(info.version, '0.4.0');
+      assert.equal(info.version, '0.5.0');
       assert.deepEqual([info.tones,info.rhythms,info.demos], [12,6,5]);
       assert.deepEqual(info.bars, [16,16,16,16,16]);
       for (const [i,events] of info.events.entries()) {
@@ -62,7 +62,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         assert(clippedKeys <= 2, 'All 49 keys should fit a wide desktop screen');
       }
       // Capture desktop/mobile appearances for human review of the physical design.
-      await page.screenshot({path: 'artifacts/ek1-v0.4.0-' + name + '-' + width + '.png', fullPage:true});
+      await page.screenshot({path: 'artifacts/ek1-v0.5.0-' + name + '-' + width + '.png', fullPage:true});
       await page.locator('#tone').selectOption('5');
       assert.match(await page.locator('#displayMain').textContent(),/TRUMPET/);
       await page.locator('#playDemo').click();
@@ -127,6 +127,31 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       await page.locator('#midiFile').setInputFiles({name:'invalid.mid',mimeType:'audio/midi',buffer:Buffer.from([1,2,3])});
       await page.waitForFunction(()=>document.querySelector('#midiStatus').textContent.includes('Could not open MIDI'));
       assert.equal(await page.evaluate(()=>EK1.state.midiNotes),2);
+      await page.locator('#fmToggle').click();
+      assert.equal(await page.evaluate(()=>EK1.state.fmEnabled),true);
+      assert.equal(await page.locator('#fmPreset option').count(),8);
+      assert(await page.locator('#tone').isDisabled());
+      await page.locator('#fmPreset').selectOption('2');
+      await page.locator('#fmBrightness').evaluate(el=>{el.value='150';el.dispatchEvent(new Event('input',{bubbles:true}));});
+      assert.equal(await page.evaluate(()=>EK1.state.fmSettings.brightness),1.5);
+      await page.locator('#record').click();
+      await page.keyboard.down('q');
+      await page.waitForFunction(()=>EK1.state.takeNotes===1);
+      await page.keyboard.up('q');
+      await page.locator('#record').click();
+      const fmDownload=page.waitForEvent('download');
+      await page.locator('#exportTake').click();
+      const fmFile=await fmDownload;
+      const fmRecording=EK1MIDI.parse(readFileSync(await fmFile.path()));
+      assert.equal(fmRecording.notes[0].program,38);
+      await page.locator('#playTake').click();
+      await page.waitForFunction(()=>EK1.state.transport==='take');
+      await page.locator('#stop').click();
+      await page.locator('#fmReset').click();
+      assert.equal(await page.evaluate(()=>EK1.state.fmSettings.brightness),1);
+      await page.locator('#fmToggle').click();
+      assert.equal(await page.evaluate(()=>EK1.state.fmEnabled),false);
+      assert(await page.locator('#tone').isEnabled());
       if (width === 390) {
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         assert(overflow <= 2, 'Unexpected horizontal page overflow: ' + overflow);
