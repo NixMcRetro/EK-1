@@ -1,0 +1,57 @@
+EK-1 v0.9.0 — third-party software and sound bank notices
+
+Original EK-1 application: GPL-3.0-or-later (see LICENSE). Third-party works
+retain their own licences, permissions and disclaimers. No restriction on
+modification, replacement or reverse engineering for debugging modifications
+to the LAME library is imposed by this package.
+
+SpessaSynth library 4.4.10 and core 4.4.12
+Copyright (c) 2026 Spessasus. Apache-2.0.
+https://github.com/spessasus/spessasynth_lib
+https://github.com/spessasus/spessasynth_core
+Local changes: the lib bundle was built using esbuild 0.25.12 and its module
+export replaced with a classic-script global (EK1LocalSynth). The exact
+upstream processor from lib 4.4.10 was adapted by removing the AudioWorklet
+registration entrypoint and exposing the processor core (EK1LocalProcessor).
+These modified files are labelled as such. The synthesis algorithms are
+unchanged by this adaptation. local-audio.js provides the direct-file bridge.
+The original npm packages, pinned dependency metadata and licence files are
+in vendor/sources/ and licenses/. The processor's bundled OpenMPT notices
+are preserved in the JavaScript and reproduced in licenses/.
+
+fflate 0.8.3 — MIT, copyright (c) 2026 Arjun Barrett.
+https://github.com/101arrowz/fflate
+stb-vorbis 0.0.8 — Apache-2.0, Spessasus. Wrapper around stb_vorbis.
+https://github.com/spessasus/stb-vorbis
+https://github.com/nothings/stb
+The original stb_vorbis is available under MIT or public-domain terms; see
+its upstream source for the original notice. The package's Apache licence
+and upstream npm archive are provided.
+OpenMPT portions — BSD-3-Clause; copyright (c) 2004–2026 OpenMPT Project
+Developers and Contributors; copyright (c) 1997–2003 Olivier Lapicque.
+https://openmpt.org/
+
+MP3 encoding: LAME / lamejs 1.2.1, Alex Zhukov and LAME contributors.
+https://lame.sourceforge.io/
+https://github.com/zhuker/lamejs
+The npm manifest declares LGPL-3.0; the original package contains additional
+LAME notices and GNU Library GPL v2 COPYING. Both upstream notices, full
+LGPL-3.0 and GPL-3.0 texts, the unmodified encoder and exact original npm
+archive (including JS and Java source and makeall.sh) are included. The
+encoder is loaded as a separately replaceable script, vendor/lame.min.js.
+The application's original HTML/CSS/JS are provided in editable form; replace
+vendor/lame.min.js with an interface-compatible modified build, then reopen
+index.html. The encoder source archive also includes the unminified script.
+The use-strict 1.0.1 dependency is ISC-licensed; notice and npm archive included.
+
+SoundFonts: no sound bank is distributed with EK-1. FluidR3 GM by Frank Wen
+(copyright 2000–2002, 2008, MIT) is the recommended optional third-party
+download. PianoBooster hosts a download link; EK-1 does not host or fetch it.
+https://www.pianobooster.org/download.html
+Original attribution and contributor information is in licenses/FluidR3-README.txt.
+The small example MIDI song is original test material produced for EK-1.
+User-imported banks and MIDI files are not redistributed. Casino Night is a
+private regression fixture, not part of the distribution.
+
+All third-party names are used solely for factual attribution. No affiliation
+or endorsement by Casio, Yamaha, Spessasus, OpenMPT, or LAME is claimed.

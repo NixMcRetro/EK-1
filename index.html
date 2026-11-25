@@ -1,81 +1,187 @@
 <!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <html lang="en-AU">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#272c31">
-  <meta name="description" content="Electronic Keyboard (Model EK-1), a simple browser-based home keyboard with five original built-in demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.1.0</title>
+  <meta name="theme-color" content="#343837">
+  <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twenty built-in voices, six rhythms and five original demo songs.">
+  <title>Electronic Keyboard (Model EK-1) v0.9.0</title>
   <link rel="stylesheet" href="./style.css">
+  <script src="./midi.js" defer></script>
+  <script src="./vendor/spessasynth-local.js" defer></script>
+  <script src="./vendor/spessasynth-local-core.js" defer></script>
+  <script src="./local-audio.js" defer></script>
+  <script src="./soundfont.js" defer></script>
+  <script src="./fm.js" defer></script>
   <script src="./app.js" defer></script>
+  <script src="./composer.js" defer></script>
+  <script src="./vendor/lame.min.js" defer></script>
+  <script src="./audio-export.js" defer></script>
+  <script src="./composer-ui.js" defer></script>
 </head>
 <body>
-<main class="shell">
-  <section class="instrument" aria-label="Electronic Keyboard Model EK-1">
-    <header class="brand">
-      <div><p class="brand-small">ELECTRONIC KEYBOARD</p><h1>MODEL EK-1</h1></div>
-      <span class="version">v0.1.0</span>
+<main class="workbench">
+  <section class="instrument" aria-labelledby="instrumentTitle">
+    <header class="nameplate">
+      <div class="maker">
+        <span class="product-type">ELECTRONIC KEYBOARD</span>
+        <h1 id="instrumentTitle">EK-1</h1>
+      </div>
+      <div class="model-meta">
+        <span class="model-number">MODEL EK-1</span>
+        <span class="product-spec">49 KEYS · DIGITAL SOUND</span>
+        <span class="version">v0.9.0</span>
+      </div>
     </header>
-    <div class="top-panel">
-      <div class="display" role="status" aria-live="polite" aria-atomic="true">
-        <span class="display-label">EK-1 DIGITAL DISPLAY</span>
-        <strong id="displayMain">01 GRAND PIANO</strong>
-        <span id="displaySub">READY TO PLAY</span>
-      </div>
-      <div class="settings">
-        <label for="tone">TONE <select id="tone" aria-label="Instrument sound"></select></label>
-        <label for="rhythm">RHYTHM <select id="rhythm" aria-label="Rhythm style"></select></label>
-        <label for="tempo">TEMPO <span id="tempoValue" class="readout">116 BPM</span>
-          <input id="tempo" type="range" min="60" max="180" step="1" value="116">
-        </label>
-        <label for="volume">VOLUME
-          <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Volume">
-        </label>
-      </div>
-    </div>
-    <div class="button-panel">
-      <section class="control-group" aria-labelledby="demoHeading">
-        <h2 id="demoHeading">DEMO SONGS</h2>
-        <div class="control-row">
-          <label class="select-wrap" for="demoSong"><span>SONG</span><select id="demoSong" aria-label="Choose demo song"></select></label>
-          <button id="prevDemo" type="button" aria-label="Previous demo song">◀</button>
-          <button id="playDemo" type="button" class="accent">DEMO</button>
-          <button id="nextDemo" type="button" aria-label="Next demo song">▶</button>
-          <button id="melodyOff" type="button" aria-pressed="false">MELODY OFF</button>
+
+    <div class="cabinet-top">
+      <div class="speaker speaker-left" aria-hidden="true"><div class="speaker-grille"></div></div>
+
+      <div class="faceplate">
+        <div class="upper-strip">
+          <div class="display-well">
+            <div class="display" role="status" aria-live="polite" aria-atomic="true">
+              <span class="display-label">DIGITAL DISPLAY</span>
+              <strong id="displayMain">01 GRAND PIANO</strong>
+              <span id="displaySub">READY TO PLAY</span>
+            </div>
+          </div>
+          <div class="printed-banks">
+            <div class="printed-bank">
+              <h2><span class="print-accent tone-accent"></span> CLASSIC TONES</h2>
+              <p>01 PIANO <span>02 E.PIANO</span> <span>03 ORGAN</span> <span>04 ACCORDION</span> <span>05 STRINGS</span> <span>06 TRUMPET</span> <span>07 BRASS</span> <span>08 MARIMBA</span> <span>09 SYNTH</span> <span>10 PAD</span> <span>11 BASS</span> <span>12 FLUTE</span></p>
+            </div>
+            <div class="printed-bank">
+              <h2><span class="print-accent rhythm-accent"></span> RHYTHM BANK</h2>
+              <p>01 ROCK <span>02 POP</span> <span>03 DISCO</span> <span>04 SKA</span> <span>05 REGGAE</span> <span>06 ELECTRONIC</span></p>
+            </div>
+          </div>
         </div>
-      </section>
-      <section class="control-group" aria-labelledby="rhythmHeading">
-        <h2 id="rhythmHeading">RHYTHM &amp; ACCOMPANIMENT</h2>
-        <div class="control-row">
-          <button id="startRhythm" type="button">START</button>
-          <button id="stop" type="button" class="stop">STOP ■</button>
-          <button id="accomp" type="button" aria-pressed="false">AUTO CHORD</button>
-          <label class="select-wrap" for="chordType"><span>CHORD</span>
-            <select id="chordType"><option value="major">Major</option><option value="minor">Minor</option></select>
+
+        <div class="settings">
+          <label for="tone" class="setting tone-setting"><span class="setting-title voice-title">VOICE <span id="activeEngine">CLASSIC</span></span><select id="tone" aria-label="Instrument voice"></select></label>
+          <label for="rhythm" class="setting rhythm-setting"><span class="setting-title">RHYTHM</span><select id="rhythm" aria-label="Rhythm style"></select></label>
+          <label for="tempo" class="setting slider-setting"><span class="setting-title">TEMPO <output for="tempo" id="tempoValue" class="readout">116 BPM</output></span>
+            <input id="tempo" type="range" min="60" max="180" step="1" value="116" aria-label="Tempo in beats per minute">
+          </label>
+          <label for="volume" class="setting slider-setting"><span class="setting-title">MAIN VOLUME</span>
+            <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Volume">
           </label>
         </div>
-      </section>
-      <section class="control-group recording" aria-labelledby="recordHeading">
-        <h2 id="recordHeading">RECORD</h2>
-        <div class="control-row">
-          <button id="record" type="button">● REC</button>
-          <button id="playTake" type="button" disabled>PLAY BACK</button>
-          <button id="clearTake" type="button" disabled>CLEAR</button>
+
+        <section id="fmPanel" class="fm-panel" aria-labelledby="fmHeading" hidden>
+          <h2 id="fmHeading">FM SOUND SHAPING</h2>
+          <div class="fm-shaping">
+            <label>BRIGHTNESS <output id="fmBrightnessValue">100%</output><input id="fmBrightness" type="range" min="0" max="200" value="100" disabled></label>
+            <label>ATTACK <output id="fmAttackValue">100%</output><input id="fmAttack" type="range" min="25" max="400" value="100" disabled></label>
+            <label>RELEASE <output id="fmReleaseValue">100%</output><input id="fmRelease" type="range" min="25" max="400" value="100" disabled></label>
+            <button id="fmReset" type="button" disabled>RESET SOUND</button>
+          </div>
+          <p class="fm-hint">Changes apply to the next notes played. MIDI export uses approximate instrument numbers.</p>
+        </section>
+
+        <div class="button-panel">
+          <section class="control-group demo-group" aria-labelledby="demoHeading">
+            <h2 id="demoHeading">DEMONSTRATION</h2>
+            <div class="control-row">
+              <label class="select-wrap" for="demoSong"><span>SONG BANK</span><select id="demoSong" aria-label="Choose demo song"></select></label>
+              <button id="prevDemo" type="button" class="arrow-button" aria-label="Previous demo song">◀</button>
+              <button id="playDemo" type="button" class="demo-button">DEMO</button>
+              <button id="nextDemo" type="button" class="arrow-button" aria-label="Next demo song">▶</button>
+              <button id="melodyOff" type="button" aria-pressed="false">MELODY OFF</button>
+            </div>
+          </section>
+
+          <section class="control-group rhythm-group" aria-labelledby="rhythmHeading">
+            <h2 id="rhythmHeading">AUTO ACCOMPANIMENT</h2>
+            <div class="control-row">
+              <button id="startRhythm" type="button" class="start-button">START</button>
+              <button id="stop" type="button">STOP ■</button>
+              <button id="accomp" type="button" aria-pressed="false">AUTO CHORD</button>
+              <label class="select-wrap chord-wrap" for="chordType"><span>CHORD</span>
+                <select id="chordType"><option value="major">Major</option><option value="minor">Minor</option></select>
+              </label>
+            </div>
+          </section>
+
+          <section class="control-group record-group" aria-labelledby="recordHeading">
+            <h2 id="recordHeading">ONE-TOUCH RECORDING</h2>
+            <div class="control-row">
+              <button id="record" type="button" aria-pressed="false">● REC</button>
+              <button id="playTake" type="button" disabled>PLAY BACK</button>
+              <button id="clearTake" type="button" disabled>CLEAR</button>
+            </div>
+          </section>
         </div>
-      </section>
-    </div>
-    <div class="keyboard-body">
-      <p class="keyboard-label"><span>49-KEY ELECTRONIC KEYBOARD</span><span>POLYPHONIC SOUND</span></p>
-      <div class="keyboard-scroll" tabindex="0" aria-label="Scroll to reach all 49 piano keys">
-        <div class="keys" id="keys" role="group" aria-label="Playable piano keyboard from C3 to C7"></div>
       </div>
-      <p class="hint">Play with your mouse, touchscreen, or computer keys <strong>Z S X D C V G B H N J M</strong> and <strong>Q 2 W 3 E R 5 T 6 Y 7 U</strong>. With AUTO CHORD on, the lowest octave chooses a chord.</p>
+
+      <div class="speaker speaker-right" aria-hidden="true"><div class="speaker-grille"></div></div>
     </div>
+
+    <div class="key-front">
+      <span class="front-caption">CHORD / BASS</span>
+      <span class="front-caption front-right">MELODY KEYBOARD</span>
+    </div>
+    <div class="keyboard-scroll" tabindex="0" aria-label="Scroll sideways to reach all 49 piano keys">
+      <div class="keys" id="keys" role="group" aria-label="Playable piano keyboard from C3 to C7"></div>
+    </div>
+    <div class="keyboard-lip" aria-hidden="true"><span>EK-1 · 49 KEY</span><span>POLYPHONIC</span></div>
+    <div class="mobile-key-nav" aria-label="Move along the on-screen keyboard"><button id="keyLeft" type="button">◀ LOWER KEYS</button><span>SWIPE KEYS TO SCROLL</span><button id="keyRight" type="button">HIGHER KEYS ▶</button></div>
   </section>
-  <footer>
-    <p>Five original demo songs. Twelve tones. Six rhythms. No accounts or downloads required.</p>
-    <p>EK-1 is an original home-keyboard-inspired instrument, not a Casio product. Audio begins when you press a key or control.</p>
-  </footer>
+
+  <details class="song-builder" open>
+    <summary>SONG BUILDER <span>Make your own music</span></summary>
+    <p class="compose-intro">Choose a style, generate an arrangement, and edit any chord or melody note. Play it back or save a MIDI file.</p>
+    <div class="compose-settings">
+      <label>STYLE <select id="composeStyle"></select></label>
+      <label>KEY <select id="composeKey"></select></label>
+      <label>CHORD PATTERN <select id="composeProgress"></select></label>
+      <label>LENGTH <select id="composeBars"><option value="4">4 bars</option><option value="8">8 bars</option><option value="16">16 bars</option></select></label>
+      <label>TEMPO (BPM) <input id="composeTempo" type="number" min="60" max="180" value="112"></label>
+      <button type="button" id="composeGenerate">NEW ARRANGEMENT</button>
+    </div>
+    <p class="compose-hint">Key, chord pattern and length are applied by NEW ARRANGEMENT, which replaces the current notes. Style and tempo apply at playback.</p>
+    <div id="composeTracks" class="compose-tracks" aria-label="Song parts"></div>
+    <div class="compose-table-wrap"><table class="compose-table"><thead><tr><th>BAR</th><th>CHORD</th><th>BEAT 1</th><th>BEAT 2</th><th>BEAT 3</th><th>BEAT 4</th></tr></thead><tbody id="composeRows"></tbody></table></div>
+    <div class="compose-actions"><button id="composePlay" type="button">PLAY SONG</button><button id="composeMelody" type="button">NEW MELODY</button><button id="composeSave" type="button">EXPORT SONG MIDI</button></div>
+    <div class="compose-tools"><h3>PROJECT &amp; AUDIO</h3>
+      <div class="compose-actions"><button id="projectSave" type="button">SAVE PROJECT</button><button id="projectOpen" type="button">OPEN PROJECT</button><input id="projectFile" type="file" accept=".ek1,application/json" hidden><label>SECTION <select id="sectionType"><option>Intro</option><option selected>Verse</option><option>Chorus</option><option>Bridge</option><option>Ending</option></select></label><button id="appendSection" type="button">APPEND SECTION</button><button id="removeSection" type="button">REMOVE LAST SECTION</button></div>
+      <div class="compose-export-settings"><label>FORMAT <select id="audioFormat"><option value="wav">WAV (lossless)</option><option value="mp3">MP3 (compressed)</option></select></label><label>SAMPLE RATE <select id="audioRate"><option value="44100">44.1 kHz</option><option value="48000">48 kHz</option></select></label><label id="wavBitsLabel">BIT DEPTH <select id="audioBits"><option value="16">16-bit</option><option value="24">24-bit</option></select></label><label id="mp3RateLabel" hidden>BITRATE <select id="mp3Rate"><option value="128">128 kbps</option><option value="192">192 kbps</option><option value="256">256 kbps</option><option value="320" selected>320 kbps</option></select></label><button id="exportAudio" type="button">EXPORT AUDIO</button></div>
+      <button type="button" id="cancelExport" hidden>CANCEL EXPORT</button><progress id="audioProgress" max="1" value="0" hidden aria-label="Audio export progress"></progress><p class="compose-hint">Audio uses the loaded SoundFont, or Classic sounds if none is loaded. MP3 uses the bundled LAME encoder. Projects store notes and settings, not the SoundFont file.</p>
+    </div>
+    <p id="composeStatus" role="status" aria-live="polite">Your first arrangement is ready to play. Changes are kept until you close or reload the page.</p>
+  </details>
+  <section class="midi-strip" aria-labelledby="midiHeading">
+    <div class="midi-info">
+      <h2 id="midiHeading">MIDI SONGS</h2>
+      <p id="midiStatus" role="status" aria-live="polite">Open a MIDI file to listen or play along.</p>
+    </div>
+    <div class="midi-controls">
+      <input id="midiFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" hidden>
+      <button id="openMidi" type="button">OPEN MIDI</button>
+      <button id="playMidi" type="button" disabled>PLAY MIDI</button>
+      <button id="saveMidi" type="button" disabled>SAVE MIDI COPY</button>
+      <button id="exportTake" type="button" disabled>EXPORT RECORDING</button>
+    </div>
+    <p class="midi-note">MIDI stores notes, not audio. Imported songs use built-in approximations or the selected SoundFont bank.</p>
+  </section>
+
+  <section class="midi-strip soundfont-strip" aria-labelledby="bankHeading">
+    <div class="midi-info"><h2 id="bankHeading">SOUND LIBRARY</h2><p id="bankStatus" role="status" aria-live="polite">20 built-in voices. Add a local SoundFont to expand the voice menu.</p></div>
+    <div class="midi-controls">
+      <input id="bankFile" type="file" accept=".sf2,.sf3" hidden>
+      <button id="openBank" type="button">OPEN SOUNDFONT</button>
+      <button id="closeBank" type="button" disabled>REMOVE SOUNDFONT</button>
+    </div>
+    <p class="midi-note">Recommended: <a href="https://www.pianobooster.org/download.html" target="_blank" rel="noopener noreferrer">FluidR3 GM</a> by Frank Wen (external download, 148 MB, MIT). Download the SF2 file separately, extract if necessary, then choose OPEN SOUNDFONT. No banks are included or fetched automatically.</p>
+    <p class="midi-note">Classic, FM and loaded SoundFont voices share the keyboard's VOICE menu. MIDI songs use the loaded SoundFont, if present, independently of your playing voice.</p>
+  </section>
+  <div class="under-keyboard">
+    <p class="play-hint"><strong>Just play.</strong> Use the keys above, or your computer keyboard: <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> <kbd>D</kbd> <kbd>C</kbd> … then <kbd>Q</kbd> <kbd>2</kbd> <kbd>W</kbd> <kbd>3</kbd> <kbd>E</kbd> …</p>
+    <p class="small-print">Choose a voice and play, or press DEMO for one of five original songs. AUTO CHORD uses the lowest octave. Recording is temporary until you close or reload the page.</p>
+  </div>
+  <footer>Electronic Keyboard · Model EK-1 · An original browser instrument inspired by classic home keyboards. Not affiliated with Casio or Yamaha. · MP3 encoding: <a href="https://lame.sourceforge.io/">LAME</a> / <a href="https://github.com/zhuker/lamejs">lamejs 1.2.1</a> (LGPL). <a href="THIRD-PARTY-NOTICES.txt">Licences and credits</a>. Encoder source is included in the offline ZIP. <span>Original EK-1 code &copy; 2026 NixMcRetro and contributors. You may redistribute it under <a href="LICENSE">GPL-3.0-or-later</a>; provided without warranty. <a href="https://github.com/NixMcRetro/EK-1">Source code</a>.</span></footer>
 </main>
 </body>
 </html>

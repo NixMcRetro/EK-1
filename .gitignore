@@ -1,0 +1,6 @@
+node_modules/
+artifacts/
+*.sf2
+*.sf3
+*.ek1
+EK-1-*-offline.zip

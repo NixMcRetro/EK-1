@@ -1,48 +1,31 @@
 # Electronic Keyboard (Model EK-1)
 
-A simple, 1990s home-keyboard-inspired instrument that plays in your browser.
+Development version **0.9.0**. A 49-key browser instrument inspired by classic home keyboards, with 12 classic voices, eight original six-operator FM voices, six rhythms, five original demos, MIDI playback, and a four-part Song Builder. No affiliation with Casio or Yamaha.
 
-**Development version: 0.1.0**
+## Start playing
 
-Play a 49-key electronic keyboard, choose from 12 instrument tones and 6 rhythms, and listen to five original built-in demo songs. Includes one-finger chord accompaniment, a melody-off play-along mode, and basic note recording.
+Extract the whole ZIP and open `index.html` in a current browser. No local server, installer, account, network access or terminal is required. Keep the supporting files next to the HTML file. Click a key to enable audio. Computer keys Z through M and Q through U play two octaves; the on-screen keyboard spans C3 to C7. Mobile octave navigation is next to the keys.
 
-EK-1 is an original instrument and is not affiliated with Casio.
+## Instruments and SoundFonts
 
-## Getting started
+Choose a Classic or FM voice in VOICE. FM offers brightness, attack and release. Use OPEN SOUNDFONT to open a local SF2/SF3 bank (maximum 512 MiB). No SoundFont is included. [FluidR3 GM](https://www.pianobooster.org/download.html) by Frank Wen is the recommended optional download (148 MB, MIT). Extract the downloaded bank if necessary, then open the SF2 file with the file picker. Imported SoundFonts stay available while switching Classic or FM voices. MIDI playback and composition use a loaded SoundFont, otherwise the built-in approximations. Bank files are never uploaded. Loading large banks, especially compressed SF3, can use more memory than the file size.
 
-Open `index.html` locally in a modern browser or serve the repository with any static web server. The keyboard uses the Web Audio API. Audio starts when you interact with the keyboard.
+## Song Builder
 
-Computer keyboard shortcuts play two octaves: `Z S X D C V G B H N J M` and `Q 2 W 3 E R 5 T 6 Y 7 U`. Mouse and touch input can play the entire 49-key keyboard.
+Choose a style, key, pattern and length, then NEW ARRANGEMENT. Edit individual chords and melody notes, mute or change instruments, adjust track levels and pan, and append labelled sections up to 64 bars. A rest is silent; Hold extends the preceding note. New melody generates variations. Save and reopen editable `.ek1` projects; replacing an edited project prompts you to save first. Projects store the bank filename, not the actual samples. Reopen the bank to reproduce the original instruments.
 
-## Development status
+Export a multitrack MIDI file or stereo audio using the actual selected bank. WAV: 44.1/48 kHz, 16/24-bit PCM. MP3: 128/192/256/320 kbps. Rendering is local and cancellable; classic OfflineAudioContext rendering may finish its current render before cancellation takes effect. Audio exports are limited to five minutes and include a two-second release tail. Live FM and accompaniment are not recorded into Song Builder audio. MIDI import supports formats 0 and 1, up to 8 MiB and 30 minutes, with tempo changes, channel volume, pan, expression, sustain and program/bank selection. Full GM/GS/XG controllers, pitch bend, hardware MIDI, DX7 SysEx and arbitrary MIDI song editing are not implemented.
 
-Version `0.1.0` is the first development release, not a stable `1.0.0`. Note recordings currently live in memory and disappear when the page reloads. They capture played notes, not the full accompanying rhythm track.
+## Offline architecture and licensing
 
-The included tones are created using Web Audio synthesis, not sampled patches from an existing manufacturer.
+The runtime is an ordinary set of HTML, CSS and JavaScript files, not a server application. The SpessaSynth local bridge replaces the AudioWorklet entrypoint with a legacy ScriptProcessorNode for file:// compatibility. This may use more main-thread CPU and have higher latency. Browser support varies; direct local-file navigation is a release test requirement. See `THIRD-PARTY-NOTICES.txt`, `licenses/`, and `vendor/sources/` for dependencies, original notices, source and modification details. The original EK-1 application is licensed under the GNU General Public License, version 3 or (at your option) any later version (SPDX: GPL-3.0-or-later); see [LICENSE](LICENSE). It is provided without warranty. Third-party licence rights are preserved. LAME is an unmodified separate script, replaceable with an interface-compatible build. No restrictions are imposed on exercise of the third-party licence rights or reverse engineering needed to debug changes to the LAME library.
 
-## Versioning
+## Static hosting
 
-EK-1 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) with `MAJOR.MINOR.PATCH`.
+Deploy this folder unchanged to GitHub Pages or another static host. Use `index.html` as the entry point. Keep the relative paths, `vendor/`, `licenses/` and source archives intact; no runtime build, CDN, server code, or automatic SoundFont downloads are needed. The original application is licensed under GPL-3.0-or-later.
 
-- `0.1.0`: initial playable keyboard
-- `0.1.1`: bug fixes without new features
-- `0.2.0`: additional features during early development
-- `1.0.0`: first stable release
-- After `1.0.0`: PATCH for compatible fixes, MINOR for compatible features, MAJOR for breaking changes
+This is a development release candidate, not a stable 1.0.0 release. GitHub Pages and McRetro deployment are separate from this source release. See CHANGELOG.md for version history.
 
-## Licence
+## Licence and your music
 
-The original EK-1 application is licensed under the GNU General Public License, version 3 or (at your option) any later version (SPDX: GPL-3.0-or-later). See [LICENSE](LICENSE). Third-party components retain their respective licences and copyright notices.
-
-The software licence does not impose GPL terms on independently created music or exported MIDI, WAV, MP3 or project files merely because EK-1 produced them. Any third-party material remains subject to its own rights and licence terms. No affiliation with Casio or Yamaha is claimed.
-
-## Testing
-
-```sh
-node --check app.js
-npm install --no-save playwright@1.57.0
-npx playwright install chromium firefox webkit
-node .github/tests/ek1-browser-smoke.mjs
-```
-
-The application is self-contained and has no connection to the retired OP-1 browser project.
+The original EK-1 application, including its original built-in demo definitions and example MIDI to the extent covered by the project's rights, is licensed under GPL-3.0-or-later. No separate CC0 dedication is made. The software licence does not impose GPL terms on independently created music or exported MIDI, WAV, MP3 or project files merely because EK-1 produced them. Third-party material remains subject to its respective rights and licence terms.

@@ -1,31 +1,50 @@
-name: EK-1 Browser Tests
-
+name: EK-1 offline release verification
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
+concurrency:
+  group: ek1-check-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  browser:
+  offline:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify JavaScript syntax
-        run: node --check app.js
-      - name: Install browser test dependencies
+      - name: Verify distributed files and licensing
         run: |
-          npm install --no-save playwright@1.57.0
-          npx playwright install --with-deps chromium firefox webkit
-      - name: Run EK-1 keyboard regression
+          node .github/tests/ek1-integrity.mjs
+          for f in *.js; do node --check "$f"; done
+          node .github/tests/ek1-midi-codec.mjs
+      - run: npm install --ignore-scripts
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Direct-file keyboard regression
         run: node .github/tests/ek1-browser-smoke.mjs
+      - name: FM rendering
+        run: node .github/tests/ek1-fm-audio.mjs
+      - name: Direct-file SoundFont regression
+        run: node .github/tests/ek1-soundfont-browser.mjs
+      - name: Composition, project and audio export
+        run: node .github/tests/ek1-composition-browser.mjs
+      - name: Package exactly the tested source
+        run: git archive --format=zip --prefix=EK-1-v0.9.0/ --output=EK-1-v0.9.0-offline.zip HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EK-1-v0.9.0-offline
+          path: EK-1-v0.9.0-offline.zip
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: EK-1-browser-screenshots
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 7

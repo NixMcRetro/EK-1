@@ -1,0 +1,13 @@
+EK-1 0.9.0 release candidate verification
+
+PASS: syntax checks for application JavaScript.
+PASS: Chromium, in-memory HTML document with local scripts embedded solely for testing; no web server.
+PASS: actual FluidR3 GM, SHA-256 74594e8f4250680adf590507a306655a299935343583256f3b722c48a1bc1cb0; 158 melodic presets.
+PASS: arrangement playback and STOP, private Casino Night MIDI fixture opening/STOP (2.5-second playback, not full song).
+PASS: stereo 44.1 kHz 320 kbps MP3; ffprobe identifies MP3 stream, 7.37 seconds.
+PASS: stereo 48 kHz 24-bit PCM WAV; ffprobe identifies pcm_s24le, 7.33 seconds.
+PASS: cancelled export and project save/reopen.
+PASS: mobile layout at 390 px, zero horizontal document overflow.
+PASS: GitHub Actions run 45553778163 on commit 966b152c3ad65cf22b0420aacb833dedaa3baec0 completed successfully: direct-file keyboard and SoundFont regression, FM rendering, composition, project, WAV/MP3, integrity and packaging checks (Chromium, Firefox, WebKit on Linux as covered by the test suite).
+LIMIT: native macOS Safari and physical touch hardware remain untested; the full Casino Night song was not played in real time.
+LICENCE: original EK-1 application GPL-3.0-or-later; no deployment made.

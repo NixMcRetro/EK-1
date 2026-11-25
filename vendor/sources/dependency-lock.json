@@ -1,0 +1,66 @@
+{
+  "name": "audit",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "audit",
+      "version": "1.0.0",
+      "license": "ISC",
+      "dependencies": {
+        "lamejs": "1.2.1",
+        "spessasynth_lib": "4.4.10"
+      }
+    },
+    "node_modules/fflate": {
+      "version": "0.8.3",
+      "resolved": "https://registry.npmjs.org/fflate/-/fflate-0.8.3.tgz",
+      "integrity": "sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==",
+      "license": "MIT"
+    },
+    "node_modules/lamejs": {
+      "version": "1.2.1",
+      "resolved": "https://registry.npmjs.org/lamejs/-/lamejs-1.2.1.tgz",
+      "integrity": "sha512-s7bxvjvYthw6oPLCm5pFxvA84wUROODB8jEO2+CE1adhKgrIvVOlmMgY8zyugxGrvRaDHNJanOiS21/emty6dQ==",
+      "license": "LGPL-3.0",
+      "dependencies": {
+        "use-strict": "1.0.1"
+      }
+    },
+    "node_modules/spessasynth_core": {
+      "version": "4.4.12",
+      "resolved": "https://registry.npmjs.org/spessasynth_core/-/spessasynth_core-4.4.12.tgz",
+      "integrity": "sha512-/22ca0JyT6nGe8lF4hdg0WoHlzkJyM+Yu6jWjuKxk/UcgQF2OCpbC4tZs1g5OTAjBcMeUmoKIFfYQ2wAokETew==",
+      "license": "Apache-2.0",
+      "dependencies": {
+        "fflate": "0.8.3",
+        "stb-vorbis": "latest"
+      }
+    },
+    "node_modules/spessasynth_lib": {
+      "version": "4.4.10",
+      "resolved": "https://registry.npmjs.org/spessasynth_lib/-/spessasynth_lib-4.4.10.tgz",
+      "integrity": "sha512-/D6epXH1HMXWHN6MkENqNN8mFoVedygsvCnbeGn0WYzQbbqvbw3JFSS2e4o2opIkwAuQAzg2mcPh8TmYqGYxDA==",
+      "license": "Apache-2.0",
+      "dependencies": {
+        "spessasynth_core": "^4.4.12"
+      }
+    },
+    "node_modules/stb-vorbis": {
+      "version": "0.0.8",
+      "resolved": "https://registry.npmjs.org/stb-vorbis/-/stb-vorbis-0.0.8.tgz",
+      "integrity": "sha512-Ie2aMUt/su9FkfDefNy0Zmbx1U3/UO8MQU0vpdPfrymgGL4DaWXt17aT6KX7ZjrpLHicij4x+e3pTtGQEP3duw==",
+      "license": "Apache-2.0",
+      "engines": {
+        "node": ">=18"
+      }
+    },
+    "node_modules/use-strict": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/use-strict/-/use-strict-1.0.1.tgz",
+      "integrity": "sha512-IeiWvvEXfW5ltKVMkxq6FvNf2LojMKvB2OCeja6+ct24S1XOmQw2dGr2JyndwACWAGJva9B7yPHwAmeA9QCqAQ==",
+      "license": "ISC"
+    }
+  }
+}
