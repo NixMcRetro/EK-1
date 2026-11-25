@@ -1,4 +1,4 @@
-// Electronic Keyboard (Model EK-1) v0.5.0 browser regression.
+// Electronic Keyboard (Model EK-1) v0.6.0 browser regression.
 // Run with: node .github/tests/ek1-browser-smoke.mjs
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
@@ -18,7 +18,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(url, {waitUntil:'load'});
       await page.waitForFunction(() => !!window.EK1);
-      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.5\.0/);
+      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.6\.0/);
       const info = await page.evaluate(() => ({
         version: EK1.version,
         tones: EK1.tones,
@@ -27,7 +27,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         bars: Array.from({length:EK1.demos}, (_,i) => EK1.demoBars(i)),
         events: Array.from({length:EK1.demos}, (_,i) => EK1.demoEvents(i))
       }));
-      assert.equal(info.version, '0.5.0');
+      assert.equal(info.version, '0.6.0');
       assert.deepEqual([info.tones,info.rhythms,info.demos], [12,6,5]);
       assert.deepEqual(info.bars, [16,16,16,16,16]);
       for (const [i,events] of info.events.entries()) {
@@ -42,7 +42,9 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       assert.equal(await page.locator('#keys .key').count(), 49);
       assert.equal(await page.locator('#keys .key.white').count(), 29);
       assert.equal(await page.locator('#keys .key.black').count(), 20);
-      assert.equal(await page.locator('#tone option').count(), 12);
+      assert.equal(await page.locator('#tone option').count(), 20);
+      assert.equal(await page.locator('#tone optgroup').count(),2);
+      assert(!(await page.locator('#fmPanel').isVisible()));
       assert.equal(await page.locator('#rhythm option').count(), 6);
       assert.equal(await page.locator('#demoSong option').count(), 5);
       assert.deepEqual(await page.evaluate(() => EK1.parseBar('C4:1 E4:1 G4:2').map(n => n.length)), [1,1,2]);
@@ -62,7 +64,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         assert(clippedKeys <= 2, 'All 49 keys should fit a wide desktop screen');
       }
       // Capture desktop/mobile appearances for human review of the physical design.
-      await page.screenshot({path: 'artifacts/ek1-v0.5.0-' + name + '-' + width + '.png', fullPage:true});
+      await page.screenshot({path: 'artifacts/ek1-v0.6.0-' + name + '-' + width + '.png', fullPage:true});
       await page.locator('#tone').selectOption('5');
       assert.match(await page.locator('#displayMain').textContent(),/TRUMPET/);
       await page.locator('#playDemo').click();
@@ -127,11 +129,12 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       await page.locator('#midiFile').setInputFiles({name:'invalid.mid',mimeType:'audio/midi',buffer:Buffer.from([1,2,3])});
       await page.waitForFunction(()=>document.querySelector('#midiStatus').textContent.includes('Could not open MIDI'));
       assert.equal(await page.evaluate(()=>EK1.state.midiNotes),2);
-      await page.locator('#fmToggle').click();
-      assert.equal(await page.evaluate(()=>EK1.state.fmEnabled),true);
-      assert.equal(await page.locator('#fmPreset option').count(),8);
-      assert(await page.locator('#tone').isDisabled());
-      await page.locator('#fmPreset').selectOption('2');
+      await page.locator('#tone').selectOption('fm-2');
+      assert.equal(await page.evaluate(()=>EK1.state.engine),'fm');
+      assert.equal(await page.locator('#activeEngine').innerText(),'FM');
+      assert(await page.locator('#fmPanel').isVisible());
+      assert.equal(await page.locator('#tone optgroup[label="FM synthesis"] option').count(),8);
+      assert(await page.locator('#tone').isEnabled());
       await page.locator('#fmBrightness').evaluate(el=>{el.value='150';el.dispatchEvent(new Event('input',{bubbles:true}));});
       assert.equal(await page.evaluate(()=>EK1.state.fmSettings.brightness),1.5);
       await page.locator('#record').click();
@@ -149,8 +152,10 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       await page.locator('#stop').click();
       await page.locator('#fmReset').click();
       assert.equal(await page.evaluate(()=>EK1.state.fmSettings.brightness),1);
-      await page.locator('#fmToggle').click();
-      assert.equal(await page.evaluate(()=>EK1.state.fmEnabled),false);
+      await page.locator('#tone').selectOption('5');
+      assert.equal(await page.evaluate(()=>EK1.state.engine),'classic');
+      assert.equal(await page.locator('#activeEngine').innerText(),'CLASSIC');
+      assert(!(await page.locator('#fmPanel').isVisible()));
       assert(await page.locator('#tone').isEnabled());
       if (width === 390) {
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
