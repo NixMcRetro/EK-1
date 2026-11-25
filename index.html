@@ -6,8 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
   <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twenty built-in voices, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.9.9</title>
+  <title>Electronic Keyboard (Model EK-1) v0.9.10</title>
   <link rel="stylesheet" href="./style.css">
+  <script src="./preferences.js" defer></script>
   <script src="./midi.js" defer></script>
   <script src="./vendor/spessasynth-local.js" defer></script>
   <script src="./vendor/spessasynth-local-core.js" defer></script>
@@ -23,6 +24,7 @@
 </head>
 <body>
 <main class="workbench">
+  <div class="appearance-bar"><label for="themePreference">Appearance</label><select id="themePreference" aria-label="Appearance"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
   <section class="instrument" aria-labelledby="instrumentTitle">
     <header class="nameplate">
       <div class="maker">
@@ -32,7 +34,7 @@
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
         <span class="product-spec">49 KEYS - DIGITAL SOUND</span>
-        <span class="version">v0.9.9</span>
+        <span class="version">v0.9.10</span>
       </div>
     </header>
 
@@ -141,7 +143,7 @@
       <button id="closeBank" type="button" disabled>REMOVE SOUNDFONT</button>
     </div>
     <p id="demoSound" class="midi-note" role="status" aria-live="polite">Demo playback: Classic</p>
-    <details class="sound-options"><summary>Sound options</summary>
+    <details class="sound-options" data-panel="sound-options" open><summary>Sound options</summary>
       <div class="sound-options-row"><button id="favouriteVoice" type="button" aria-pressed="false">FAVOURITE CURRENT VOICE</button><label>FAVOURITES <select id="favouriteList" disabled aria-label="Favourite instruments"><option value="">No favourites yet</option></select></label></div>
       <div class="sound-options-row"><label>ROOM REVERB <output id="effect-reverbValue" for="effect-reverb">0%</output><input id="effect-reverb" type="range" min="0" max="100" value="0"></label><label>CHORUS <output id="effect-chorusValue" for="effect-chorus">0%</output><input id="effect-chorus" type="range" min="0" max="100" value="0"></label></div>
       <label class="demo-follow"><input type="checkbox" id="demoFollow" checked> Demo melody follows selected voice</label>
@@ -169,7 +171,7 @@
     <p class="midi-note">Key colours identify MIDI channels. Shared pitches show split colours; percussion and out-of-range notes are not lit.</p>
   </section>
 
-  <details class="song-builder">
+  <details class="song-builder" data-panel="song-builder" open>
     <summary>SONG BUILDER <span>Make your own music</span></summary>
     <p class="compose-intro">Choose a style, generate an arrangement, and edit any chord or melody note. Play it back or save a MIDI file.</p>
     <div class="compose-settings">
@@ -184,13 +186,13 @@
     <p class="compose-hint">Key, chord pattern and length are applied by NEW ARRANGEMENT, which replaces the current notes. Style, tempo and feel apply at playback. Natural adds subtle groove; Expressive adds stronger variation; Original retains the earlier arrangement engine.</p>
     <div class="compose-actions"><button id="composePlay" type="button">PLAY SONG</button><button id="composeMelody" type="button" title="Keep the chord progression and replace the melody">NEW MELODY</button><button id="composeHarmony" type="button">NEW CHORDS + MELODY</button><button id="composeSave" type="button">EXPORT SONG MIDI</button></div>
     <label class="compose-scroll"><input type="checkbox" id="composeReturn" checked> Return to keyboard on playback</label>
-    <details class="compose-mixer utility-disclosure"><summary>Instruments and mixer</summary><div id="composeTracks" class="compose-tracks" aria-label="Song parts"></div></details>
+    <details class="compose-mixer utility-disclosure" data-panel="mixer" open><summary>Instruments and mixer</summary><div id="composeTracks" class="compose-tracks" aria-label="Song parts"></div></details>
     <div class="compose-overview"><div class="compose-overview-heading"><span>SONG STRUCTURE <output id="composeLengthReadout"></output></span><div><button id="composeUndo" type="button" disabled>UNDO</button> <button id="composeRedo" type="button" disabled>REDO</button></div></div><div id="composeSections" aria-label="Song sections"></div><div class="compose-actions section-actions"><label>SECTION <select id="sectionType"><option>Intro</option><option selected>Verse</option><option>Chorus</option><option>Bridge</option><option>Ending</option></select></label><button id="appendSection" type="button">APPEND SECTION</button><button id="composeDuplicate" type="button" title="Duplicate the selected section directly after itself">DUPLICATE SECTION</button><button id="removeSection" type="button">REMOVE LAST SECTION</button></div></div>
-    <details class="compose-editor"><summary>Edit chords and melody</summary>
+    <details class="compose-editor" data-panel="notes" open><summary>Edit chords and melody</summary>
     <div class="compose-table-wrap"><table class="compose-table"><thead><tr><th>BAR</th><th>CHORD</th><th>BEAT 1</th><th>BEAT 2</th><th>BEAT 3</th><th>BEAT 4</th></tr></thead><tbody id="composeRows"></tbody></table></div></details>
     
     <p class="compose-hint">NEW MELODY keeps your chords. NEW CHORDS + MELODY selects a different chord pattern and generates a matching melody, keeping the song length, sections, instruments and tempo.</p>
-    <details class="compose-tools utility-disclosure"><summary>Project and audio export</summary>
+    <details class="compose-tools utility-disclosure" data-panel="project-audio" open><summary>Project and audio export</summary>
       <div class="compose-actions"><button id="projectSave" type="button">SAVE PROJECT</button><button id="projectOpen" type="button">OPEN PROJECT</button><input id="projectFile" type="file" accept=".ek1,application/json" hidden></div>
       <div class="compose-export-settings"><label>FORMAT <select id="audioFormat"><option value="wav">WAV (lossless)</option><option value="mp3">MP3 (compressed)</option></select></label><label>SAMPLE RATE <select id="audioRate"><option value="44100">44.1 kHz</option><option value="48000">48 kHz</option></select></label><label id="wavBitsLabel">BIT DEPTH <select id="audioBits"><option value="16">16-bit</option><option value="24">24-bit</option></select></label><label id="mp3RateLabel" hidden>BITRATE <select id="mp3Rate"><option value="128">128 kbps</option><option value="192">192 kbps</option><option value="256">256 kbps</option><option value="320" selected>320 kbps</option></select></label><button id="exportAudio" type="button">EXPORT AUDIO</button></div>
       <button type="button" id="cancelExport" hidden>CANCEL EXPORT</button><progress id="audioProgress" max="1" value="0" hidden aria-label="Audio export progress"></progress><p class="compose-hint">Audio uses the loaded SoundFont, or Classic sounds if none is loaded. MP3 uses the bundled LAME encoder. Projects store notes and settings, not the SoundFont file.</p>

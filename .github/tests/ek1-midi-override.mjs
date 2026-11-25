@@ -10,7 +10,7 @@ try{
  const page=await browser.newPage({viewport:{width:1280,height:900},acceptDownloads:true});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(pathToFileURL(resolve('index.html')).href);
- assert.equal(await page.locator('details[open]').count(),0);
+ assert.equal(await page.locator('details[open]').count(),5);
  assert(!(await page.locator('#midiVoiceOptions').isVisible()));
  const events=[];for(let i=0;i<32;i++){events.push({midi:60,t:i*.3,length:.22,tone:0},{midi:64,t:i*.3,length:.22,tone:10});}
  const bytes=EK1MIDI.encodeTake(events);
@@ -35,7 +35,7 @@ try{
   await page.waitForFunction(()=>!!EK1.state.lastMidiOverride);
   await page.locator('#stop').click();assert.equal(await page.evaluate(()=>EK1.state.transport),'stopped');
  }
- await page.locator('.song-builder > summary').click();await page.locator('.sound-options > summary').click();
+ assert(await page.locator('#composeTracks').isVisible());assert(await page.locator('#effect-reverb').isVisible());
  for(const width of [1280,768,390]){await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+2),'layout overflow '+width);}
  assert.deepEqual(errors,[]);console.log('PASS MIDI override, continued position, original default and utility layout');
 }finally{await browser.close();}

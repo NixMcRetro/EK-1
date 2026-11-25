@@ -1,8 +1,10 @@
-EK-1 v0.9.9 - offline release candidate
+EK-1 v0.9.10 - offline release candidate
 
 1. Extract the entire ZIP (do not open the HTML inside a ZIP preview).
 2. Double-click index.html. Keep the other files and folders beside it.
-3. Play the keyboard or expand Song Builder. No server or launcher is required.
+3. Play the keyboard or use Song Builder. All panels start open; collapse
+   any you do not need. Appearance (System, Light, Dark) and panel states
+   are remembered when local browser storage is available. No server or launcher is required.
    Note names are printed on the keyboard rails. Comma and period shift the
    computer keyboard shortcuts down/up one octave. C plays A3, V plays B3,
    B plays middle C. PAUSE/RESUME freezes or continues playback. MIDI playback colours
@@ -23,5 +25,5 @@ EK-1 v0.9.9 - offline release candidate
 Original EK-1 code: GPL-3.0-or-later, without warranty. See LICENSE,
 THIRD-PARTY-NOTICES.txt, licenses/ and vendor/sources/ for licence and source information.
 This candidate has not been published to McRetro. GitHub Actions verified direct file:// operation with Chromium, Firefox
-and WebKit on Linux for the v0.9.9 candidate. Native macOS Safari and
+and WebKit on Linux for the v0.9.9 candidate; see current CI for v0.9.10. Native macOS Safari and
 physical touch hardware are not yet independently tested.

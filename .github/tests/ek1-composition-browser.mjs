@@ -21,11 +21,9 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(pathToFileURL(resolve('index.html')).href);
   await page.waitForFunction(()=>!!window.EK1Composer&&!!window.EK1AudioExport);
-  await page.locator('.song-builder > summary').click();
-  await page.locator('.compose-editor > summary').click();
-  assert(!(await page.locator('#composeTracks').isVisible()));
-  assert(!(await page.locator('#projectSave').isVisible()));
-  await page.locator('.compose-tools > summary').click();
+  assert(await page.locator('#composeTracks').isVisible());
+  assert(await page.locator('#projectSave').isVisible());
+  assert(await page.locator('#composeRows').isVisible());
   await page.locator('#composeStyle').selectOption('Ska');
   await page.locator('#composeBars').selectOption('4');
   await page.locator('#composeGenerate').click();
@@ -87,8 +85,7 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   await page.waitForFunction(()=>EK1.state.composing);assert(await page.locator('#composePlay').evaluate(el=>document.activeElement===el)||!(await page.locator('.keyboard-scroll').evaluate(el=>document.activeElement===el)));
   await page.locator('#stop').click();
   await page.waitForFunction(()=>EK1.state.transport==='stopped');
-  assert(!(await page.locator('#effect-reverb').isVisible()));
-  await page.locator('.sound-options > summary').click();
+  assert(await page.locator('#effect-reverb').isVisible());
   await page.locator('#tone').selectOption('0');await page.locator('#favouriteVoice').click();
   await page.locator('#tone').selectOption('fm-2');await page.locator('#favouriteVoice').click();
   await page.locator('#favouriteList').selectOption('0');

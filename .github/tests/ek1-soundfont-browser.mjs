@@ -18,7 +18,7 @@ try{
  assert.equal(await page.evaluate(()=>EK1.state.engine),'soundfont');
  assert.equal(await page.locator('#tone option').count(),21);
  await page.locator('#tone').selectOption('sf-0');
- await page.locator('.sound-options > summary').click();await page.locator('#favouriteVoice').click();
+ await page.locator('#favouriteVoice').click();
  assert.equal(await page.locator('#favouriteList option').count(),2);
  await page.locator('#tone').selectOption('0');await page.locator('#favouriteList').selectOption('sf-0');
  assert.equal(await page.evaluate(()=>EK1.state.engine),'soundfont');

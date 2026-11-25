@@ -2,6 +2,12 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.10] - Remembered layout and dark mode
+
+- All five disclosure panels start expanded, with independently remembered open/closed states where local browser storage is available.
+- Compact Appearance selector with System, Light and Dark modes; the instrument faceplate and key colours remain unchanged.
+- No audio, file, project or volume data is persisted. Storage failure falls back to session-only preferences.
+
 ## [0.9.9] - MIDI repeat and SoundFont prominence
 
 - Imported MIDI repeats by default, with an optional loop checkbox; song notes and controllers reset between passes.

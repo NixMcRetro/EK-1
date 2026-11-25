@@ -27,6 +27,8 @@ jobs:
           node .github/tests/ek1-musical-arrangement.mjs
       - run: npm install --ignore-scripts
       - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Appearance and remembered layout
+        run: node .github/tests/ek1-preferences.mjs
       - name: Direct-file keyboard regression
         run: node .github/tests/ek1-browser-smoke.mjs
       - name: FM rendering
@@ -44,11 +46,11 @@ jobs:
       - name: Composition, project and audio export
         run: node .github/tests/ek1-composition-browser.mjs
       - name: Package exactly the tested source
-        run: git archive --format=zip --prefix=EK-1-v0.9.9/ --output=EK-1-v0.9.9-offline.zip HEAD
+        run: git archive --format=zip --prefix=EK-1-v0.9.10/ --output=EK-1-v0.9.10-offline.zip HEAD
       - uses: actions/upload-artifact@v4
         with:
-          name: EK-1-v0.9.9-offline
-          path: EK-1-v0.9.9-offline.zip
+          name: EK-1-v0.9.10-offline
+          path: EK-1-v0.9.10-offline.zip
           retention-days: 30
       - uses: actions/upload-artifact@v4
         if: always()
