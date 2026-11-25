@@ -175,7 +175,7 @@
   function demoIndex(tr=transport){return tr?.type==='demo'?(tr.demoIndex??tr.song):null;}
   function demoDisplay(tr,bar){
     const index=demoIndex(tr),song=SONGS[index];
-    show(String(index+1).padStart(2,'0')+' '+song.title.toUpperCase(),'DEMO • '+(tr.sampleBank?'SF':'CLASSIC')+' • BAR '+bar+'/'+song.bars+(melodyOff?' • MELODY OFF':''));
+    show(String(index+1).padStart(2,'0')+' '+song.title.toUpperCase(),'DEMO - '+(tr.sampleBank?'SF':'CLASSIC')+' - BAR '+bar+'/'+song.bars+(melodyOff?' - MELODY OFF':''));
   }
   async function audio() {
     if (!ctx) {
@@ -450,7 +450,7 @@
     transport = { type: 'rhythm', rhythm, step: 0, nextTime: ctx.currentTime + .08, bpm: tempo, bus: createBus() };
     loop = setInterval(tick, 25);
     reflectButtons();
-    show(RHYTHMS[rhythm].name.toUpperCase() + ' RHYTHM', tempo + ' BPM • PLAYING');
+    show(RHYTHMS[rhythm].name.toUpperCase() + ' RHYTHM', tempo + ' BPM - PLAYING');
     tick();
   }
   function stopHeld() {
@@ -478,7 +478,7 @@
         take.push({ midi, tone:engine==='fm'?EK1FM.presets[fmIndex].tone:engine==='soundfont'&&bank?EK1MIDI.toneFor(bank.selected.program):tone, ...(engine==='fm'?{fm:{index:fmIndex,settings:{...fmSettings}},program:EK1FM.presets[fmIndex].program}:{}), ...(engine==='soundfont'&&bank ? {program:bank.selected.program,bankMSB:bank.selected.bankMSB,bankLSB:bank.selected.bankLSB,bankGeneration} : {}), t: Math.max(0, ctx.currentTime - takeStart), length: null });
         held.get(token).takeIndex = take.length - 1;
       }
-      if (transport?.type !== 'demo' && transport?.type !== 'midi') show(voiceLabel(), 'KEY ' + label(midi) + (recording ? ' • RECORDING' : ''));
+      if (transport?.type !== 'demo' && transport?.type !== 'midi') show(voiceLabel(), 'KEY ' + label(midi) + (recording ? ' - RECORDING' : ''));
     }
     keyElements.get(midi)?.classList.add('pressed');
   }
@@ -497,7 +497,7 @@
     clearTimeout(recordTimer); recordTimer = null;
     for (const e of take) if (e.length === null) e.length = Math.max(.08, ctx.currentTime - takeStart - e.t);
     reflectButtons();
-    show('RECORDING SAVED', take.length + ' NOTES • PLAY BACK OR CLEAR');
+    show('RECORDING SAVED', take.length + ' NOTES - PLAY BACK OR CLEAR');
   }
   async function toggleRecord() {
     if (recording) { endRecord(); return; }
@@ -507,7 +507,7 @@
     take = []; takeStart = ctx.currentTime; recording = true;
     recordTimer = setTimeout(endRecord, 120000);
     reflectButtons();
-    show('RECORDING', 'PLAY THE KEYS • REC TO FINISH');
+    show('RECORDING', 'PLAY THE KEYS - REC TO FINISH');
   }
   async function playTake() {
     if (!take.length || recording || !await audio()) return;

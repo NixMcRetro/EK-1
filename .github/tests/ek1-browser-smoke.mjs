@@ -45,6 +45,13 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       assert.equal(await page.locator('#naturalLabels [data-note="60"]').innerText(),'C4');
       assert.equal(await page.locator('#sharpLabels [data-note="61"]').innerText(),'C#4');
       assert.equal(await page.locator('details[open]').count(),0);
+      const alignment=await page.evaluate(()=>[48,49,60,61,72,73,96].map(n=>{
+        const rail=document.querySelector('[data-note="'+n+'"]').getBoundingClientRect();
+        const key=document.querySelector('#keys [data-midi="'+n+'"]').getBoundingClientRect();
+        return Math.abs(rail.left+rail.width/2-key.left-key.width/2);
+      }));
+      assert(alignment.every(n=>n<2),'Rail label alignment: '+alignment);
+      assert(!(await page.locator('body').innerText()).includes('·'));
       await page.locator('.keyboard-scroll').focus();
       await page.keyboard.press(',');assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),-1);
       assert.equal(await page.locator('[data-midi="48"] .shortcut').innerText(),'Z');

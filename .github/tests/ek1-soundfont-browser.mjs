@@ -26,9 +26,9 @@ try{
  await page.keyboard.down('z');
  await page.waitForFunction(()=>EK1.state.sampleVoices>0);
  await page.keyboard.up('z');
- const bytes=EK1MIDI.encodeTake([{midi:69,t:0,length:2,tone:0}]);
+ const bytes=EK1MIDI.encodeTake([{midi:69,t:0,length:1,tone:0},{midi:69,t:0,length:2,tone:10}]);
  await page.locator('#midiFile').setInputFiles({name:'test.mid',mimeType:'audio/midi',buffer:Buffer.from(bytes)});
- await page.waitForFunction(()=>EK1.state.midiNotes===1);
+ await page.waitForFunction(()=>EK1.state.midiNotes===2);
  await page.locator('#tone').selectOption('fm-2');
  assert.equal(await page.evaluate(()=>EK1.state.engine),'fm');
  assert(await page.evaluate(()=>EK1.state.soundfont),'Bank must stay loaded in FM mode');
@@ -61,7 +61,10 @@ try{
  await page.waitForFunction(()=>EK1.state.sampleKeys===0);
  await page.locator('#playMidi').click();
  await page.waitForFunction(()=>EK1.state.transport==='midi'&&EK1.state.sampleVoices>0);
+ await page.waitForFunction(()=>document.querySelector('[data-midi="69"]').dataset.channels?.split(',').length===2);
+ await page.waitForFunction(()=>document.querySelector('[data-midi="69"]').dataset.channels?.split(',').length===1);
  await page.locator('#stop').click();
+ assert.equal(await page.locator('.channel-lit').count(),0);
  await page.waitForFunction(()=>EK1.state.sampleVoices===0&&EK1.state.sampleKeys===0);
  await page.locator('#tone').selectOption('sf-0');
  assert.equal(await page.evaluate(()=>EK1.state.engine),'soundfont');
