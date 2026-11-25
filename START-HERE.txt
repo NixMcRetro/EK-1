@@ -1,4 +1,4 @@
-EK-1 v0.9.1 - offline release candidate
+EK-1 v0.9.3 - offline release candidate
 
 1. Extract the entire ZIP (do not open the HTML inside a ZIP preview).
 2. Double-click index.html. Keep the other files and folders beside it.
@@ -7,10 +7,15 @@ EK-1 v0.9.1 - offline release candidate
    own SF2/SF3 file. Click OPEN SOUNDFONT. No sound banks are bundled.
 5. Press DEMO to hear the five original songs with your loaded SoundFont.
    MELODY OFF lets you play along; STOP also silences held sample notes.
-6. Save your song as an editable .ek1 project, MIDI, WAV or MP3.
+6. Choose Natural or Expressive feel in Song Builder for more musical
+   grooves. Original keeps the earlier arrangement engine.
+7. NEW MELODY keeps the chords; NEW CHORDS + MELODY replaces both.
+   PLAY SONG returns to the keyboard unless you uncheck the option.
+   Main volume starts at 25%. Keep device/headphone volume low when testing.
+8. Save your song as an editable .ek1 project, MIDI, WAV or MP3.
 
 Original EK-1 code: GPL-3.0-or-later, without warranty. See LICENSE,
 THIRD-PARTY-NOTICES.txt, licenses/ and vendor/sources/ for licence and source information.
 This candidate has not been published to McRetro. GitHub Actions verified direct file:// operation with Chromium, Firefox
-and WebKit on Linux for the v0.9.1 candidate. Native macOS Safari and
+and WebKit on Linux for the v0.9.3 candidate. Native macOS Safari and
 physical touch hardware are not yet independently tested.

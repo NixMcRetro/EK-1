@@ -1,11 +1,11 @@
 {
   "name": "ek-1",
-  "version": "0.9.1",
+  "version": "0.9.3",
   "private": true,
   "description": "Electronic Keyboard (Model EK-1)",
   "license": "GPL-3.0-or-later",
   "scripts": {
-    "test": "node .github/tests/ek1-integrity.mjs && node .github/tests/ek1-midi-codec.mjs",
+    "test": "node .github/tests/ek1-integrity.mjs && node .github/tests/ek1-midi-codec.mjs && node .github/tests/ek1-musical-arrangement.mjs",
     "test:browser": "node .github/tests/ek1-browser-smoke.mjs && node .github/tests/ek1-fm-audio.mjs && node .github/tests/ek1-soundfont-browser.mjs && node .github/tests/ek1-composition-browser.mjs"
   },
   "devDependencies": {

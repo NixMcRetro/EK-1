@@ -6,12 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
   <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twenty built-in voices, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.9.1</title>
+  <title>Electronic Keyboard (Model EK-1) v0.9.3</title>
   <link rel="stylesheet" href="./style.css">
   <script src="./midi.js" defer></script>
   <script src="./vendor/spessasynth-local.js" defer></script>
   <script src="./vendor/spessasynth-local-core.js" defer></script>
   <script src="./local-audio.js" defer></script>
+  <script src="./levels.js" defer></script>
   <script src="./soundfont.js" defer></script>
   <script src="./fm.js" defer></script>
   <script src="./app.js" defer></script>
@@ -31,7 +32,7 @@
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
         <span class="product-spec">49 KEYS · DIGITAL SOUND</span>
-        <span class="version">v0.9.1</span>
+        <span class="version">v0.9.3</span>
       </div>
     </header>
 
@@ -65,8 +66,8 @@
           <label for="tempo" class="setting slider-setting"><span class="setting-title">TEMPO <output for="tempo" id="tempoValue" class="readout">116 BPM</output></span>
             <input id="tempo" type="range" min="60" max="180" step="1" value="116" aria-label="Tempo in beats per minute">
           </label>
-          <label for="volume" class="setting slider-setting"><span class="setting-title">MAIN VOLUME</span>
-            <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Volume">
+          <label for="volume" class="setting slider-setting"><span class="setting-title">MAIN VOLUME <output id="volumeValue" for="volume" class="readout">25%</output></span>
+            <input id="volume" type="range" min="0" max="100" step="1" value="25" aria-label="Volume">
           </label>
         </div>
 
@@ -135,16 +136,19 @@
     <p class="compose-intro">Choose a style, generate an arrangement, and edit any chord or melody note. Play it back or save a MIDI file.</p>
     <div class="compose-settings">
       <label>STYLE <select id="composeStyle"></select></label>
+      <label>FEEL <select id="composeFeel" aria-label="Arrangement feel"></select></label>
       <label>KEY <select id="composeKey"></select></label>
       <label>CHORD PATTERN <select id="composeProgress"></select></label>
       <label>LENGTH <select id="composeBars"><option value="4">4 bars</option><option value="8">8 bars</option><option value="16">16 bars</option></select></label>
       <label>TEMPO (BPM) <input id="composeTempo" type="number" min="60" max="180" value="112"></label>
       <button type="button" id="composeGenerate">NEW ARRANGEMENT</button>
     </div>
-    <p class="compose-hint">Key, chord pattern and length are applied by NEW ARRANGEMENT, which replaces the current notes. Style and tempo apply at playback.</p>
+    <p class="compose-hint">Key, chord pattern and length are applied by NEW ARRANGEMENT, which replaces the current notes. Style, tempo and feel apply at playback. Natural adds subtle groove; Expressive adds stronger variation; Original retains the earlier arrangement engine.</p>
     <div id="composeTracks" class="compose-tracks" aria-label="Song parts"></div>
     <div class="compose-table-wrap"><table class="compose-table"><thead><tr><th>BAR</th><th>CHORD</th><th>BEAT 1</th><th>BEAT 2</th><th>BEAT 3</th><th>BEAT 4</th></tr></thead><tbody id="composeRows"></tbody></table></div>
-    <div class="compose-actions"><button id="composePlay" type="button">PLAY SONG</button><button id="composeMelody" type="button">NEW MELODY</button><button id="composeSave" type="button">EXPORT SONG MIDI</button></div>
+    <div class="compose-actions"><button id="composePlay" type="button">PLAY SONG</button><button id="composeMelody" type="button" title="Keep the chord progression and replace the melody">NEW MELODY</button><button id="composeHarmony" type="button">NEW CHORDS + MELODY</button><button id="composeSave" type="button">EXPORT SONG MIDI</button></div>
+    <label class="compose-scroll"><input type="checkbox" id="composeReturn" checked> Return to keyboard on playback</label>
+    <p class="compose-hint">NEW MELODY keeps your chords. NEW CHORDS + MELODY selects a different chord pattern and generates a matching melody, keeping the song length, sections, instruments and tempo.</p>
     <div class="compose-tools"><h3>PROJECT &amp; AUDIO</h3>
       <div class="compose-actions"><button id="projectSave" type="button">SAVE PROJECT</button><button id="projectOpen" type="button">OPEN PROJECT</button><input id="projectFile" type="file" accept=".ek1,application/json" hidden><label>SECTION <select id="sectionType"><option>Intro</option><option selected>Verse</option><option>Chorus</option><option>Bridge</option><option>Ending</option></select></label><button id="appendSection" type="button">APPEND SECTION</button><button id="removeSection" type="button">REMOVE LAST SECTION</button></div>
       <div class="compose-export-settings"><label>FORMAT <select id="audioFormat"><option value="wav">WAV (lossless)</option><option value="mp3">MP3 (compressed)</option></select></label><label>SAMPLE RATE <select id="audioRate"><option value="44100">44.1 kHz</option><option value="48000">48 kHz</option></select></label><label id="wavBitsLabel">BIT DEPTH <select id="audioBits"><option value="16">16-bit</option><option value="24">24-bit</option></select></label><label id="mp3RateLabel" hidden>BITRATE <select id="mp3Rate"><option value="128">128 kbps</option><option value="192">192 kbps</option><option value="256">256 kbps</option><option value="320" selected>320 kbps</option></select></label><button id="exportAudio" type="button">EXPORT AUDIO</button></div>

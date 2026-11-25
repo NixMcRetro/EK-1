@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v0.9.1. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.9.3. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.9.1';
+  const VERSION = '0.9.3';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -105,8 +105,8 @@
       ]
     }
   ];
-  let ctx, master, noise, transport = null, loop = null, endTimer = null, transportGeneration = 0;
-  let tone = 0, rhythm = 0, tempo = 116, volume = .7, melodyOff = false, autoChord = false;
+  let ctx, master, outputStage, outputMeter, noise, transport = null, loop = null, endTimer = null, transportGeneration = 0;
+  let tone = 0, rhythm = 0, tempo = 116, volume = EK1Levels.DEFAULT_VOLUME, melodyOff = false, autoChord = false;
   let heldChord = null, recording = false, take = [], takeStart = 0, recordTimer = null;
   let importedMidi = null, midiName = '', importRequest = 0;
   let bank = null, bankLoading = false, bankFileRef = null;
@@ -179,12 +179,9 @@
       const Audio = window.AudioContext || window.webkitAudioContext;
       if (!Audio) { show('AUDIO NOT SUPPORTED', 'Use a browser with Web Audio'); return false; }
       ctx = new Audio();
-      master = ctx.createGain();
-      const compressor = ctx.createDynamicsCompressor();
-      compressor.threshold.value = -18;
-      compressor.ratio.value = 3;
-      master.gain.value = volume;
-      master.connect(compressor).connect(ctx.destination);
+      outputMeter=ctx.createAnalyser();outputMeter.fftSize=2048;outputMeter.connect(ctx.destination);
+      outputStage=EK1Levels.create(ctx,outputMeter,volume);
+      master=outputStage.input;
       noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const data = noise.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -447,7 +444,7 @@
       held.set(token, { midi, sound: { release: t => sounds.forEach(s => s.release(t)) }, started: ctx.currentTime, chord: true });
       show('AUTO CHORD ' + heldChord.toUpperCase(), 'PLAY HIGHER KEYS FOR THE MELODY');
     } else {
-      const sound = engine==='soundfont' && bank ? bank.liveOn(midi, 96) : engine==='fm' ? EK1FM.voice(ctx,master,midi,ctx.currentTime,0,fmIndex,fmSettings,.38,true) : voice(midi, ctx.currentTime, 0, tone, .3, master, true);
+      const sound = engine==='soundfont' && bank ? bank.liveOn(midi, 96) : engine==='fm' ? EK1FM.voice(ctx,master,midi,ctx.currentTime,0,fmIndex,fmSettings,.38*EK1Levels.FM_GAIN,true) : voice(midi, ctx.currentTime, 0, tone, .3, master, true);
       held.set(token, { midi, sound, started: ctx.currentTime, tone });
       if (recording) {
         take.push({ midi, tone:engine==='fm'?EK1FM.presets[fmIndex].tone:engine==='soundfont'&&bank?EK1MIDI.toneFor(bank.selected.program):tone, ...(engine==='fm'?{fm:{index:fmIndex,settings:{...fmSettings}},program:EK1FM.presets[fmIndex].program}:{}), ...(engine==='soundfont'&&bank ? {program:bank.selected.program,bankMSB:bank.selected.bankMSB,bankLSB:bank.selected.bankLSB,bankGeneration} : {}), t: Math.max(0, ctx.currentTime - takeStart), length: null });
@@ -496,7 +493,7 @@
     const start = ctx.currentTime + .09;
     for (const n of take) {
       const at = start + n.t;
-      if(n.fm)EK1FM.voice(ctx,bus,n.midi,at,n.length||.12,n.fm.index,n.fm.settings,.38);
+      if(n.fm)EK1FM.voice(ctx,bus,n.midi,at,n.length||.12,n.fm.index,n.fm.settings,.38*EK1Levels.FM_GAIN);
       else voice(n.midi, at, n.length || .12, n.tone, .34, bus);
       lamp(n.midi, at, n.length || .12);
     }
@@ -771,7 +768,8 @@
     });
     $('volume').addEventListener('input', () => {
       volume = Number($('volume').value) / 100;
-      if (ctx) master.gain.setTargetAtTime(volume, ctx.currentTime, .015);
+      if (ctx) outputStage.setVolume(volume);
+      $('volumeValue').textContent=Math.round(volume*100)+'%';
     });
     $('demoSong').addEventListener('change', () => {
       if (transport?.type === 'demo') beginDemo(Number($('demoSong').value));
@@ -850,6 +848,7 @@
     get state() { return { transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoArrangement,
+    outputPeak(){if(!outputMeter)return 0;const samples=new Float32Array(outputMeter.fftSize);outputMeter.getFloatTimeDomainData(samples);return samples.reduce((peak,n)=>Math.max(peak,Math.abs(n)),0);},
     demoBars: index => SONGS[index]?.bars,
     parseBar
   });
