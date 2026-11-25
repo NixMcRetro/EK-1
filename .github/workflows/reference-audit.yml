@@ -1,0 +1,46 @@
+name: EK-1 dependency licence and reference bank audit
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/reference-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Collect upstream packages and licence materials
+        run: |
+          mkdir -p audit/packages
+          cd audit
+          npm init -y
+          npm install --ignore-scripts --save-exact spessasynth_lib@4.4.10 lamejs@1.2.1
+          npm ls --all --json > dependency-tree.json
+          node -e 'const p=require("./package-lock.json"); for(const [path,v] of Object.entries(p.packages)){if(path)console.log(v.name||path.replace(/^node_modules\//,""),v.version)}' > versions.txt
+          while read name version; do npm pack "$name@$version" --pack-destination packages; done < versions.txt
+          find node_modules -type f \( -iname 'license*' -o -iname 'copying*' -o -iname 'notice*' \) -exec cp --parents '{}' . \;
+          tar czf dependency-notices.tar.gz package-lock.json dependency-tree.json versions.txt $(find node_modules -type f \( -iname 'license*' -o -iname 'copying*' -o -iname 'notice*' \))
+          sudo apt-get update -qq
+          apt-get download fluid-soundfont-gm
+          mkdir -p fluid
+          dpkg-deb -x fluid-soundfont-gm*.deb fluid
+          find fluid -type f -printf '%p %s\n'
+          sha256sum fluid/usr/share/sounds/sf2/FluidR3_GM.sf2 > fluid-sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ek1-licence-audit
+          path: |
+            audit/dependency-notices.tar.gz
+            audit/packages/
+            audit/fluid/usr/share/doc/
+            audit/fluid-sha256.txt
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ek1-fluidr3-reference
+          path: audit/fluid/
+          retention-days: 30
