@@ -185,6 +185,7 @@
     $('closeBank').disabled = !bank || bankLoading || recording;
     $('bankPreset').disabled = !bank || bankLoading || recording;
     $('tone').disabled = !!bank;
+    $('record').disabled = bankLoading;
     if(bankLoading)$('playMidi').disabled=true;
   }
   function createBus() {
@@ -293,7 +294,7 @@
     if (loop) { clearInterval(loop); loop = null; }
     if (endTimer) { clearTimeout(endTimer); endTimer = null; }
     clearLamps();
-    if (transport?.type === 'midi' && ctx) {
+    if ((transport?.type === 'midi' || transport?.sampleBank) && ctx) {
       if (transport.sampleBank) transport.sampleBank.stopSong();
       else transport.active.forEach(n => n.sound.release(ctx.currentTime));
     }
@@ -421,7 +422,7 @@
   }
   async function toggleRecord() {
     if (recording) { endRecord(); return; }
-    if (!await audio()) return;
+    if (bankLoading || !await audio()) return;
     stopTransport(false);
     stopHeld();
     take = []; takeStart = ctx.currentTime; recording = true;
@@ -433,6 +434,10 @@
     if (!take.length || recording || !await audio()) return;
     stopTransport(false);
     const bus = createBus();
+    if(bank && take.some(n=>n.program!==undefined)){
+      transport={type:'take',song:EK1MIDI.parse(EK1MIDI.encodeTake(take)),index:0,start:ctx.currentTime+.08,active:[],bus,sampleBank:bank};
+      loop=setInterval(midiTick,25);reflectButtons();show('PLAYING RECORDING',take.length+' NOTES');midiTick();return;
+    }
     transport = { type: 'take', bus };
     const start = ctx.currentTime + .09;
     for (const n of take) {
@@ -471,7 +476,7 @@
   }
   function midiTick() {
     const tr=transport;
-    if(!tr||tr.type!=='midi')return;
+    if(!tr||(tr.type!=='midi'&&!tr.sampleBank))return;
     const now=ctx.currentTime;
     if(tr.sampleBank){
       let work=0;
@@ -481,7 +486,7 @@
         if(end<=now||tr.active.length>=64)continue;
         tr.sampleBank.songOn(n);tr.active.push({note:n,end});lamp(n.key,now,end-now);
       }
-      if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');}
+      if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show(tr.type==='take'?'PLAYBACK FINISHED':'MIDI FINISHED','PRESS PLAY TO REPEAT');}
       return;
     }
     tr.active=tr.active.filter(n=>n.end>now);
