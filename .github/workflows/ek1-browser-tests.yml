@@ -44,7 +44,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ek1-v0.5.0-visual-review
+          name: ek1-v0.6.0-visual-review
           path: artifacts/*.png
           retention-days: 30
           if-no-files-found: warn
