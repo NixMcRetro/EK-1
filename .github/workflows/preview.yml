@@ -10,6 +10,7 @@ on:
       - 'style.css'
       - 'midi.js'
       - 'soundfont.js'
+      - 'fm.js'
       - 'package.json'
       - 'scripts/**'
   workflow_dispatch:
@@ -29,18 +30,18 @@ jobs:
           import re
           p = Path('index.html').read_text()
           p = p.replace('<link rel="stylesheet" href="./style.css">', '<style>\n' + Path('style.css').read_text() + '\n</style>')
-          for file in ['midi.js','soundfont.js','app.js']:
+          for file in ['midi.js','soundfont.js','fm.js','app.js']:
               p = p.replace('<script src="./'+file+'" defer></script>', '')
-          js = '\n'.join(Path(f).read_text() for f in ['midi.js','soundfont.js','app.js'])
+          js = 'window.EK1Standalone=true;\n' + '\n'.join(Path(f).read_text() for f in ['midi.js','soundfont.js','fm.js','app.js'])
           js += "\n document.getElementById('openBank').disabled=true; document.getElementById('bankFile').disabled=true; document.getElementById('bankStatus').textContent='SoundFonts require the complete local-server ZIP preview. Built-in sounds and MIDI work in this HTML.';"
           p = p.replace('</body>', '<script>\n'+js.replace('</script','<\\/script')+'\n</script>\n</body>')
           assert '<script src=' not in p
-          Path('EK-1-v0.4.0-standalone.html').write_text(p)
+          Path('EK-1-v0.5.0-standalone.html').write_text(p)
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: EK-1-v0.4.0-standalone
-          path: EK-1-v0.4.0-standalone.html
+          name: EK-1-v0.5.0-standalone
+          path: EK-1-v0.5.0-standalone.html
           retention-days: 30
   complete:
     runs-on: ubuntu-latest
@@ -53,13 +54,13 @@ jobs:
       - run: npm run build
       - name: Prepare runnable package
         run: |
-          mkdir -p EK-1-v0.4.0
-          cp index.html style.css midi.js soundfont.js app.js README.md DESIGN.md CHANGELOG.md EK-1-v0.4.0/
-          cp -R vendor EK-1-v0.4.0/
-          cat > EK-1-v0.4.0/START-HERE.txt <<'EOF'
-          EK-1 v0.4.0 - development preview
+          mkdir -p EK-1-v0.5.0
+          cp index.html style.css midi.js soundfont.js fm.js app.js README.md DESIGN.md CHANGELOG.md EK-1-v0.5.0/
+          cp -R vendor EK-1-v0.5.0/
+          cat > EK-1-v0.5.0/START-HERE.txt <<'EOF'
+          EK-1 v0.5.0 - development preview
           1. Extract this ZIP. Open Terminal.
-          2. Type cd followed by a space, drag the extracted EK-1-v0.4.0 folder into Terminal, then press Return.
+          2. Type cd followed by a space, drag the extracted EK-1-v0.5.0 folder into Terminal, then press Return.
           3. Run: python3 -m http.server 8000 --bind 127.0.0.1
           4. Open http://127.0.0.1:8000/ in your browser.
           5. Press Control-C in Terminal when finished.
@@ -67,9 +68,9 @@ jobs:
           OPEN SOUNDFONT accepts your own SF2 or SF3. No bank is bundled.
           The application does not upload your MIDI or SoundFont files.
           EOF
-          zip -qr EK-1-v0.4.0-complete.zip EK-1-v0.4.0
+          zip -qr EK-1-v0.5.0-complete.zip EK-1-v0.5.0
       - uses: actions/upload-artifact@v4
         with:
-          name: EK-1-v0.4.0-complete
-          path: EK-1-v0.4.0-complete.zip
+          name: EK-1-v0.5.0-complete
+          path: EK-1-v0.5.0-complete.zip
           retention-days: 30
