@@ -39,14 +39,16 @@ jobs:
         run: node .github/tests/ek1-pause-browser.mjs
       - name: MIDI voice override and utility layout
         run: node .github/tests/ek1-midi-override.mjs
+      - name: MIDI looping and keyboard navigation
+        run: node .github/tests/ek1-midi-loop.mjs
       - name: Composition, project and audio export
         run: node .github/tests/ek1-composition-browser.mjs
       - name: Package exactly the tested source
-        run: git archive --format=zip --prefix=EK-1-v0.9.8/ --output=EK-1-v0.9.8-offline.zip HEAD
+        run: git archive --format=zip --prefix=EK-1-v0.9.9/ --output=EK-1-v0.9.9-offline.zip HEAD
       - uses: actions/upload-artifact@v4
         with:
-          name: EK-1-v0.9.8-offline
-          path: EK-1-v0.9.8-offline.zip
+          name: EK-1-v0.9.9-offline
+          path: EK-1-v0.9.9-offline.zip
           retention-days: 30
       - uses: actions/upload-artifact@v4
         if: always()

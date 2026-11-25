@@ -124,14 +124,7 @@
    }catch(e){report(e.message);}
  });
  // This is navigation, not browser zoom. Keep the option session-local.
- function returnToKeyboard(){
-   if(!$('composeReturn').checked)return;
-   const instrument=document.querySelector('.instrument'),keys=document.querySelector('.keyboard-scroll');
-   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-   const target=instrument.getBoundingClientRect().height>window.innerHeight?keys:instrument;
-   target.scrollIntoView({block:target===keys?'center':'start',behavior:reduced?'auto':'smooth'});
-   keys.focus({preventScroll:true});
- }
+ function returnToKeyboard(){if($('composeReturn').checked)EK1.returnToKeyboard();}
  $('composePlay').addEventListener('click',async()=>{try{if(EK1.state.composing){EK1.stopComposition();return;}settings();const bytes=C.encode(song);await EK1.playComposition(bytes);report('Playing your song. Play along on the keyboard.');if(EK1.state.composing)returnToKeyboard();}catch(e){report(e.message);}});
  $('composeSave').addEventListener('click',()=>{try{settings();EK1.downloadComposition(C.encode(song));report('Song exported as multitrack MIDI.');}catch(e){report(e.message);}});
  // Strict validation prevents malformed project files from replacing a working song.

@@ -1,4 +1,4 @@
-EK-1 v0.9.8 - offline release candidate
+EK-1 v0.9.9 - offline release candidate
 
 1. Extract the entire ZIP (do not open the HTML inside a ZIP preview).
 2. Double-click index.html. Keep the other files and folders beside it.
@@ -23,5 +23,5 @@ EK-1 v0.9.8 - offline release candidate
 Original EK-1 code: GPL-3.0-or-later, without warranty. See LICENSE,
 THIRD-PARTY-NOTICES.txt, licenses/ and vendor/sources/ for licence and source information.
 This candidate has not been published to McRetro. GitHub Actions verified direct file:// operation with Chromium, Firefox
-and WebKit on Linux for the v0.9.8 candidate. Native macOS Safari and
+and WebKit on Linux for the v0.9.9 candidate. Native macOS Safari and
 physical touch hardware are not yet independently tested.

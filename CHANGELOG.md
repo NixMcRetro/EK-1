@@ -2,6 +2,12 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.9] - MIDI repeat and SoundFont prominence
+
+- Imported MIDI repeats by default, with an optional loop checkbox; song notes and controllers reset between passes.
+- PLAY MIDI returns to the keyboard by default, with an opt-out. Song Builder shares the same navigation helper.
+- Move Sound Library / SoundFonts directly below the instrument, before the other utility sections.
+
 ## [0.9.8] - MIDI voice override and layout consistency
 
 - Optional live MIDI voice override for all melodic channels or one selected channel; original MIDI remains the default.

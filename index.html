@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
   <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twenty built-in voices, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.9.8</title>
+  <title>Electronic Keyboard (Model EK-1) v0.9.9</title>
   <link rel="stylesheet" href="./style.css">
   <script src="./midi.js" defer></script>
   <script src="./vendor/spessasynth-local.js" defer></script>
@@ -32,7 +32,7 @@
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
         <span class="product-spec">49 KEYS - DIGITAL SOUND</span>
-        <span class="version">v0.9.8</span>
+        <span class="version">v0.9.9</span>
       </div>
     </header>
 
@@ -133,6 +133,24 @@
     <div class="mobile-key-nav" aria-label="Move along the on-screen keyboard"><button id="keyLeft" type="button">◀ LOWER KEYS</button><span>SWIPE KEYS TO SCROLL</span><button id="keyRight" type="button">HIGHER KEYS ▶</button></div>
   </section>
 
+  <section class="midi-strip soundfont-strip" aria-labelledby="bankHeading">
+    <div class="midi-info"><h2 id="bankHeading">SOUND LIBRARY / SOUNDFONTS</h2><p id="bankStatus" role="status" aria-live="polite">20 built-in voices. Add a local SoundFont to expand the voice menu.</p></div>
+    <div class="midi-controls">
+      <input id="bankFile" type="file" accept=".sf2,.sf3" hidden>
+      <button id="openBank" type="button">OPEN SOUNDFONT</button>
+      <button id="closeBank" type="button" disabled>REMOVE SOUNDFONT</button>
+    </div>
+    <p id="demoSound" class="midi-note" role="status" aria-live="polite">Demo playback: Classic</p>
+    <details class="sound-options"><summary>Sound options</summary>
+      <div class="sound-options-row"><button id="favouriteVoice" type="button" aria-pressed="false">FAVOURITE CURRENT VOICE</button><label>FAVOURITES <select id="favouriteList" disabled aria-label="Favourite instruments"><option value="">No favourites yet</option></select></label></div>
+      <div class="sound-options-row"><label>ROOM REVERB <output id="effect-reverbValue" for="effect-reverb">0%</output><input id="effect-reverb" type="range" min="0" max="100" value="0"></label><label>CHORUS <output id="effect-chorusValue" for="effect-chorus">0%</output><input id="effect-chorus" type="range" min="0" max="100" value="0"></label></div>
+      <label class="demo-follow"><input type="checkbox" id="demoFollow" checked> Demo melody follows selected voice</label>
+      <p class="midi-note">Effects apply to playback and audio exports, not MIDI. Favourites and effects are session-only. Replacing a SoundFont clears its favourites.</p>
+    </details>
+    <p class="midi-note">Recommended: <a href="https://www.pianobooster.org/download.html" target="_blank" rel="noopener noreferrer">FluidR3 GM</a> by Frank Wen (external download, 148 MB, MIT). Download the SF2 file separately, extract if necessary, then choose OPEN SOUNDFONT. No banks are included or fetched automatically.</p>
+
+  </section>
+
   <details class="song-builder">
     <summary>SONG BUILDER <span>Make your own music</span></summary>
     <p class="compose-intro">Choose a style, generate an arrangement, and edit any chord or melody note. Play it back or save a MIDI file.</p>
@@ -173,28 +191,13 @@
       <button id="saveMidi" type="button" disabled>SAVE MIDI COPY</button>
       <button id="exportTake" type="button" disabled>EXPORT RECORDING</button>
     </div>
+    <div class="midi-playback-options"><label><input type="checkbox" id="midiLoop" checked> Loop MIDI</label><label><input type="checkbox" id="midiReturn" checked> Return to keyboard on playback</label></div>
     <div id="midiVoiceOptions" class="midi-voice-options" hidden><label for="midiOverride">MIDI VOICE <select id="midiOverride"><option value="original">Original instruments</option></select></label><p class="midi-note">Choose which melodic channels follow VOICE. Changes apply to the next notes, without restarting playback.</p></div>
     <div id="midiLegend" class="midi-legend" aria-label="MIDI channel colours" hidden></div>
     <p class="midi-note">Key colours identify MIDI channels. Shared pitches show split colours; percussion and out-of-range notes are not lit.</p>
   </section>
 
-  <section class="midi-strip soundfont-strip" aria-labelledby="bankHeading">
-    <div class="midi-info"><h2 id="bankHeading">SOUND LIBRARY</h2><p id="bankStatus" role="status" aria-live="polite">20 built-in voices. Add a local SoundFont to expand the voice menu.</p></div>
-    <div class="midi-controls">
-      <input id="bankFile" type="file" accept=".sf2,.sf3" hidden>
-      <button id="openBank" type="button">OPEN SOUNDFONT</button>
-      <button id="closeBank" type="button" disabled>REMOVE SOUNDFONT</button>
-    </div>
-    <p id="demoSound" class="midi-note" role="status" aria-live="polite">Demo playback: Classic</p>
-    <details class="sound-options"><summary>Sound options</summary>
-      <div class="sound-options-row"><button id="favouriteVoice" type="button" aria-pressed="false">FAVOURITE CURRENT VOICE</button><label>FAVOURITES <select id="favouriteList" disabled aria-label="Favourite instruments"><option value="">No favourites yet</option></select></label></div>
-      <div class="sound-options-row"><label>ROOM REVERB <output id="effect-reverbValue" for="effect-reverb">0%</output><input id="effect-reverb" type="range" min="0" max="100" value="0"></label><label>CHORUS <output id="effect-chorusValue" for="effect-chorus">0%</output><input id="effect-chorus" type="range" min="0" max="100" value="0"></label></div>
-      <label class="demo-follow"><input type="checkbox" id="demoFollow" checked> Demo melody follows selected voice</label>
-      <p class="midi-note">Effects apply to playback and audio exports, not MIDI. Favourites and effects are session-only. Replacing a SoundFont clears its favourites.</p>
-    </details>
-    <p class="midi-note">Recommended: <a href="https://www.pianobooster.org/download.html" target="_blank" rel="noopener noreferrer">FluidR3 GM</a> by Frank Wen (external download, 148 MB, MIT). Download the SF2 file separately, extract if necessary, then choose OPEN SOUNDFONT. No banks are included or fetched automatically.</p>
 
-  </section>
   <div class="under-keyboard">
     <p class="play-hint"><strong>Just play.</strong> Use the keys above, or your computer keyboard: <kbd>C</kbd> = A3, <kbd>V</kbd> = B3, <kbd>B</kbd> = middle C, <kbd>N</kbd> = D4. The two rows continue from F3 to E5. Use <kbd>,</kbd> and <kbd>.</kbd> to shift the computer keyboard by an octave.</p>
     <p class="small-print">Choose a voice and play, or press DEMO for one of five original songs. AUTO CHORD uses the lowest octave. Recording is temporary until you close or reload the page.</p>

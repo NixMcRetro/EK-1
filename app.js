@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v0.9.8. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.9.9. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.9.8';
+  const VERSION = '0.9.9';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -410,7 +410,7 @@
     clearLamps();
     if ((transport?.type === 'midi' || transport?.sampleBank) && ctx) {
       if (transport.sampleBank) transport.sampleBank.stopSong();
-      else transport.active.forEach(n => n.sound.release(ctx.currentTime));
+      transport.active?.forEach(n => n.sound.release(ctx.currentTime));
     }
     if (transport?.bus && ctx) {
       const b = transport.bus, now = ctx.currentTime;
@@ -630,6 +630,29 @@
     if(e.control===7||e.control===11)c.gain.gain.setTargetAtTime(c.volume*c.expression/(127*127),at,.005);
     if(e.control===10&&c.pan)c.pan.pan.setTargetAtTime((e.value-64)/64,at,.005);
   }
+  function repeatMidi(tr){return tr.type==='midi'&&!tr.composing&&$('midiLoop').checked&&tr.song===importedMidi;}
+  function finishMidi(tr){
+    if(transport!==tr)return;
+    if(repeatMidi(tr)){
+      const count=(tr.repeatCount||0)+1;
+      // Reset only song channels, not the independent live SoundFont channel.
+      // Recreate channel buses to discard old controller automation and notes.
+      stopTransport(false);
+      transport=makeMidiTransport('midi',tr.song,tr.sampleBank,createBus());
+      transport.repeatCount=count;
+      loop=setInterval(midiTick,25);reflectButtons();
+      show('MIDI PLAYBACK','LOOP '+(count+1)+' - PLAY ALONG');
+      midiTick();return;
+    }
+    stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');
+  }
+  function returnToKeyboard(){
+    const instrument=document.querySelector('.instrument'),keys=document.querySelector('.keyboard-scroll');
+    const target=instrument.getBoundingClientRect().height>window.innerHeight?keys:instrument;
+    keys.focus({preventScroll:true});
+    // Immediate navigation avoids focus/scroll animation conflicts in Safari.
+    target.scrollIntoView({block:target===keys?'center':'start',behavior:'instant'});
+  }
   function midiTick() {
     const tr=transport;
     if(paused||!tr||(tr.type!=='midi'&&!tr.sampleBank))return;
@@ -663,7 +686,8 @@
         const bar=Math.min(16,1+Math.floor(Math.max(0,now-tr.start)/(240/SONGS[tr.demoIndex].tempo)));
         if(bar!==tr.demoBar){tr.demoBar=bar;demoDisplay(tr,bar);}
       }
-      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+.7){
+      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+(repeatMidi(tr)?.15:.7)){
+        if(tr.type==='midi'){finishMidi(tr);return;}
         const title=tr.type==='demo'?SONGS[tr.demoIndex].title.toUpperCase():'PRESS PLAY TO REPEAT';
         stopTransport(false);show(tr.type==='demo'?'DEMO FINISHED':tr.type==='take'?'PLAYBACK FINISHED':'MIDI FINISHED',title);
       }
@@ -687,15 +711,18 @@
         tr.active.push({sound,end:end+1.2});lamp(n.key,begin,Math.max(.01,end-begin),n.channel);
       }
     }
-    if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');}
+    if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+(repeatMidi(tr)?.15:.7)){finishMidi(tr);}
   }
   async function playMidi() {
     if(transport?.type==='midi'&&!transport.composing){stopTransport();return;}
-    if(!importedMidi||recording||bankLoading||!await audio())return;
+    if(!importedMidi||recording||bankLoading)return;
+    const request=++transportGeneration;
+    if(!await audio()||request!==transportGeneration)return;
     stopTransport(false);
-    transport=makeMidiTransport('midi',importedMidi,bank,createBus());
+    transport=makeMidiTransport('midi',importedMidi,bank,createBus());transport.repeatCount=0;
     loop=setInterval(midiTick,25);reflectButtons();
     show('MIDI PLAYBACK','PLAY ALONG ON THE KEYS');midiTick();
+    if($('midiReturn').checked)returnToKeyboard();
   }
   async function playComposition(bytes){
     if(recording||bankLoading)throw Error('Finish recording or loading the bank first.');
@@ -999,7 +1026,8 @@
     tones: TONES.length,
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
-    get state() { return { midiOverride, lastMidiOverride:transport?.lastOverride||null, keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    returnToKeyboard,
+    get state() { return { midiLoop:$('midiLoop').checked,midiRepeats:transport?.repeatCount||0,midiOverride, lastMidiOverride:transport?.lastOverride||null, keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoArrangement,
     outputPeak(){if(!outputMeter)return 0;const samples=new Float32Array(outputMeter.fftSize);outputMeter.getFloatTimeDomainData(samples);return samples.reduce((peak,n)=>Math.max(peak,Math.abs(n)),0);},
