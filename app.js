@@ -378,7 +378,7 @@
     pending.delete(token);
     if (!ready || cancelled.has(token)) { cancelled.delete(token); return; }
     if (held.has(token)) return;
-    if (autoChord && midi < 60 && transport?.type !== 'demo') {
+    if (autoChord && midi < 60 && transport?.type !== 'demo' && transport?.type !== 'midi') {
       heldChord = label(midi + 12) + ($('chordType').value === 'minor' ? 'm' : '');
       const chord = chordInfo(heldChord);
       const sounds = chord.notes.map(n => voice(n, ctx.currentTime, .0, 2, .12, master, true));
@@ -446,7 +446,7 @@
     try {
       if(file.size>EK1MIDI.MAX_BYTES)throw Error('MIDI files are limited to 8 MB.');
       const parsed=EK1MIDI.parse(await file.arrayBuffer());
-      if(id!==importRequest)return;
+      if(id!==importRequest||recording)return;
       if(transport?.type==='midi')stopTransport(false);
       importedMidi=parsed; midiName=file.name;
       const seconds=Math.round(parsed.duration), length=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
@@ -570,7 +570,7 @@
   function setupKeyboardShortcuts() {
     const shortcutMap = new Map(SHORTCUTS.map((key, i) => [key, 60 + i]));
     document.addEventListener('keydown', event => {
-      if (event.repeat || event.ctrlKey || event.altKey || event.metaKey || /^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(event.target.tagName) || event.target.isContentEditable) return;
+      if (event.repeat || event.ctrlKey || event.altKey || event.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName) || event.target.isContentEditable) return;
       const midi = shortcutMap.get(event.key.toLowerCase());
       if (midi === undefined) return;
       event.preventDefault();
