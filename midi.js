@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* EK-1 Standard MIDI File codec. No external dependencies. */
 (function (root) {
   'use strict';

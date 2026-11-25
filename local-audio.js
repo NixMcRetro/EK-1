@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* EK-1 direct-file bridge. Uses the existing SpessaSynth processor core with native
  * Web Audio ScriptProcessorNode (legacy fallback); no modules, fetch, or worklet URL.
  * Both ports are local; messages preserve upstream transfer semantics.

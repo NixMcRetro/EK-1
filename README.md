@@ -18,14 +18,14 @@ Export a multitrack MIDI file or stereo audio using the actual selected bank. WA
 
 ## Offline architecture and licensing
 
-The runtime is an ordinary set of HTML, CSS and JavaScript files, not a server application. The SpessaSynth local bridge replaces the AudioWorklet entrypoint with a legacy ScriptProcessorNode for file:// compatibility. This may use more main-thread CPU and have higher latency. Browser support varies; direct local-file navigation is a release test requirement. See `THIRD-PARTY-NOTICES.txt`, `licenses/`, and `vendor/sources/` for dependencies, original notices, source and modification details. The original EK-1 application is licensed under GPL-3.0-or-later; see LICENSE. Third-party licence rights are preserved. LAME is an unmodified separate script, replaceable with an interface-compatible build. No restrictions are imposed on exercise of the third-party licence rights or reverse engineering needed to debug changes to the LAME library.
+The runtime is an ordinary set of HTML, CSS and JavaScript files, not a server application. The SpessaSynth local bridge replaces the AudioWorklet entrypoint with a legacy ScriptProcessorNode for file:// compatibility. This may use more main-thread CPU and have higher latency. Browser support varies; direct local-file navigation is a release test requirement. See `THIRD-PARTY-NOTICES.txt`, `licenses/`, and `vendor/sources/` for dependencies, original notices, source and modification details. The original EK-1 application is licensed under the GNU General Public License, version 3 or (at your option) any later version (SPDX: GPL-3.0-or-later); see [LICENSE](LICENSE). It is provided without warranty. Third-party licence rights are preserved. LAME is an unmodified separate script, replaceable with an interface-compatible build. No restrictions are imposed on exercise of the third-party licence rights or reverse engineering needed to debug changes to the LAME library.
 
 ## Static hosting
 
 Deploy this folder unchanged to GitHub Pages or another static host. Use `index.html` as the entry point. Keep the relative paths, `vendor/`, `licenses/` and source archives intact; no runtime build, CDN, server code, or automatic SoundFont downloads are needed. The original application is licensed under GPL-3.0-or-later.
 
-This is a development release candidate, not a public release. No McRetro publication is authorised by this package. See CHANGELOG.md for version history.
+This is a development release candidate, not a stable 1.0.0 release. GitHub Pages and McRetro deployment are separate from this source release. See CHANGELOG.md for version history.
 
 ## Licence and your music
 
-The original EK-1 application is licensed under GPL-3.0-or-later. The software licence does not impose GPL terms on independently created music or exported MIDI, WAV, MP3 or project files merely because EK-1 produced them. Third-party material remains subject to its respective rights and licence terms.
+The original EK-1 application, including its original built-in demo definitions and example MIDI to the extent covered by the project's rights, is licensed under GPL-3.0-or-later. No separate CC0 dedication is made. The software licence does not impose GPL terms on independently created music or exported MIDI, WAV, MP3 or project files merely because EK-1 produced them. Third-party material remains subject to its respective rights and licence terms.

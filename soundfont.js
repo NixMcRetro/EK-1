@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Local, optional SoundFont adapter. Library and worklet are bundled at build time. */
 (function(root){
   'use strict';

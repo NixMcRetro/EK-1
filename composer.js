@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* EK-1 Song Builder: editable, deterministic arrangements and Standard MIDI File format 1. */
 (function(root){
   'use strict';

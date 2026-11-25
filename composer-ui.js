@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Lightweight song builder controls. No network requests or local storage. */
 (function(){
  'use strict';

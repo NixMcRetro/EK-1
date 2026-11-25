@@ -7,7 +7,8 @@ EK-1 v0.9.0 - offline release candidate
    own SF2/SF3 file. Click OPEN SOUNDFONT. No sound banks are bundled.
 5. Save your song as an editable .ek1 project, MIDI, WAV or MP3.
 
-Read THIRD-PARTY-NOTICES.txt and licenses/ for licence and source information.
-This candidate has not been published to McRetro. The browser tests were
-performed without a web server; literal file:// navigation was blocked by
-the test environment's administrator policy. macOS Safari is unverified.
+Original EK-1 code: GPL-3.0-or-later, without warranty. See LICENSE,
+THIRD-PARTY-NOTICES.txt, licenses/ and vendor/sources/ for licence and source information.
+This candidate has not been published to McRetro. GitHub Actions verified direct file:// operation with Chromium, Firefox
+and WebKit on Linux for the v0.9.0 candidate. Native macOS Safari and
+physical touch hardware are not yet independently tested.

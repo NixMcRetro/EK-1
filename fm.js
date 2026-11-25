@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* EK-1 original six-operator frequency-modulation synthesizer.
  * Native Web Audio sine oscillators; no ROMs, borrowed patches or DX7 emulation.
  * Operator tuples: target (-1 = audible), ratio, amount, attack, decay, sustain, release.

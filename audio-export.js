@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Local audio export, using exactly the same SoundFont core as playback. */
 (function(root){'use strict';
  const yieldUI=()=>new Promise(r=>setTimeout(r,0));

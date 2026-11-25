@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Electronic Keyboard (Model EK-1) v0.9.0. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';

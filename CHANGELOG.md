@@ -10,6 +10,7 @@ All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 - External FluidR3 GM download recommendation with creator attribution; no bundled sound banks.
 - Full third-party licence inventory, separate unmodified MP3 encoder and corresponding source.
 - Updated offline documentation; removed obsolete server-based setup instructions.
+- Original application licensed under GPL-3.0-or-later, with visible licence and source links.
 
 ## [0.8.0] - Project and audio preview
 
