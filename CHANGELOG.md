@@ -2,6 +2,13 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.2] - Musical refinement
+
+- Natural and Expressive feels with deterministic timing and velocity variation, style-specific swing, recurring motifs, chord inversions, bass transitions and phrase fills.
+- Style-specific General MIDI instrument and mixer defaults for new arrangements.
+- Original feel preserves playback of existing projects; no new dependency or SoundFont.
+- Identical arrangement generation for playback, MIDI, WAV and MP3 export.
+
 ## [0.9.1] - SoundFont demos and playback reliability
 
 - All five original demos use the loaded SoundFont, with separate GM melody, chord, bass and percussion channels.

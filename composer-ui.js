@@ -11,10 +11,12 @@
  function fill(id,items){$(id).replaceChildren(...items.map(([v,n])=>opt(n,v)));}
  fill('composeKey',C.names.map((n,i)=>[i,n+' major']));
  fill('composeStyle',Object.keys(C.styles).map(n=>[n,n]));
+ fill('composeFeel',C.feels.map(n=>[n,n]));
  fill('composeProgress',Object.keys(C.progressions).map(n=>[n,n==='Minor'?'Minor mood':n]));
  $('composeStyle').value='Pop';$('composeProgress').value='Bright';$('composeBars').value='8';
  function rebuild(){
    $('composeTempo').value=song.bpm;
+   $('composeFeel').value=song.feel??'Original';
    const rows=$('composeRows');rows.replaceChildren();
    song.bars.forEach((bar,i)=>{
      const tr=document.createElement('tr'),number=document.createElement('th');number.scope='row';number.textContent=String(i+1).padStart(2,'0');if(bar.section){const label=document.createElement('span');label.className='section-bar';label.textContent=bar.section;number.append(label);}tr.append(number);
@@ -44,11 +46,12 @@
      tracks.append(row);
    });
  }
- function settings(){const bpm=Number($('composeTempo').value);if(!Number.isFinite(bpm)||bpm<60||bpm>180)throw Error('Tempo must be 60–180 BPM.');const nextStyle=$('composeStyle').value;if(song.bpm!==Math.round(bpm)||song.style!==nextStyle)changed();song.bpm=Math.round(bpm);song.style=nextStyle;}
+ function settings(){const bpm=Number($('composeTempo').value);if(!Number.isFinite(bpm)||bpm<60||bpm>180)throw Error('Tempo must be 60–180 BPM.');const nextStyle=$('composeStyle').value,feel=$('composeFeel').value;if(song.bpm!==Math.round(bpm)||song.style!==nextStyle||(song.feel??'Original')!==feel)changed();song.bpm=Math.round(bpm);song.style=nextStyle;song.feel=feel;}
  $('composeTempo').addEventListener('change',changed);
+ $('composeFeel').addEventListener('change',()=>{changed();report('Feel updated for the next playback or export.');});
  $('composeStyle').addEventListener('change',()=>{$('composeTempo').value=C.styles[$('composeStyle').value].bpm;});
- $('composeGenerate').addEventListener('click',()=>{if(dirty&&!confirm('Replace your unsaved arrangement? Save a project first to keep it.'))return;EK1.stopComposition();song=C.create(Number($('composeKey').value),$('composeProgress').value,Number($('composeBars').value),$('composeStyle').value);song.bars[0].section='Verse';variation=0;dirty=false;rebuild();report('New arrangement ready. Edit chords or melody, or press PLAY SONG.');});
- $('composeMelody').addEventListener('click',()=>{try{settings();}catch(e){report(e.message);return;}C.melodyFor(song.bars,++variation).forEach((m,i)=>{const size=song.bars[i].melody.length;const next=Array(size).fill(null);m.forEach((note,j)=>{const at=j*size/4;next[at]=note;if(note===-1)for(let k=1;k<size/4;k++)next[at+k]=-1;else if(note!==null&&m[j+1]===-1)for(let k=1;k<size/4;k++)next[at+k]=-1;});song.bars[i].melody=cleanMelody(next);});changed();rebuild();report('New melody ready.');});
+ $('composeGenerate').addEventListener('click',()=>{if(dirty&&!confirm('Replace your unsaved arrangement? Save a project first to keep it.'))return;EK1.stopComposition();song=C.create(Number($('composeKey').value),$('composeProgress').value,Number($('composeBars').value),$('composeStyle').value,$('composeFeel').value);song.bars[0].section='Verse';variation=0;dirty=false;rebuild();report('New arrangement ready. Edit chords or melody, or press PLAY SONG.');});
+ $('composeMelody').addEventListener('click',()=>{try{settings();}catch(e){report(e.message);return;}C.melodyFor(song.bars,++variation,song.style,song.key,song.feel).forEach((m,i)=>{const size=Math.max(song.bars[i].melody.length,m.length);const next=Array(size).fill(null);m.forEach((note,j)=>{const at=j*size/m.length;next[at]=note;if(note===-1||(note!==null&&m[j+1]===-1))for(let k=1;k<size/m.length;k++)next[at+k]=-1;});song.bars[i].melody=cleanMelody(next);});changed();rebuild();report('New melody ready.');});
  $('composePlay').addEventListener('click',async()=>{try{if(EK1.state.composing){EK1.stopComposition();return;}settings();const bytes=C.encode(song);await EK1.playComposition(bytes);report('Playing your song. Play along on the keyboard.');}catch(e){report(e.message);}});
  $('composeSave').addEventListener('click',()=>{try{settings();EK1.downloadComposition(C.encode(song));report('Song exported as multitrack MIDI.');}catch(e){report(e.message);}});
  // Strict validation prevents malformed project files from replacing a working song.
@@ -56,6 +59,7 @@
    if(!p||p.format!=='EK-1' || p.version!==1)throw Error('Not a supported EK-1 project.');
    const x=p.song,integer=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b;
    if(!x||!integer(x.key,0,11)||!Object.hasOwn(C.styles,x.style)||!integer(x.bpm,60,180)||!Array.isArray(x.bars)||x.bars.length<4||x.bars.length>64||!Array.isArray(x.parts)||x.parts.length!==4)throw Error('Invalid project settings.');
+   if(x.feel!==undefined&&!C.feels.includes(x.feel))throw Error('Invalid project feel.');
    const allowed=C.chords(x.key).map(C.chordName);
    for(const b of x.bars){if(!b||!b.chord||!integer(b.chord.root,0,11)||typeof b.chord.minor!=='boolean'||typeof b.chord.dim!=='boolean'||!allowed.includes(C.chordName(b.chord))||!Array.isArray(b.melody)||![4,8,16].includes(b.melody.length)||b.melody.some((n,i)=>n!==null&&!(n===-1&&i>0)&&!integer(n,60,84))||b.section!==undefined&&(typeof b.section!=='string'||b.section.length>32))throw Error('Invalid notes or chords in project.');}
    const defaults=C.create().parts;
@@ -65,7 +69,7 @@
  $('projectSave').addEventListener('click',()=>{try{settings();download(new Blob([JSON.stringify({format:'EK-1',version:1,song,bank:EK1.bankName,progression:$('composeProgress').value},null,2)],{type:'application/json'}),'EK-1-song.ek1');dirty=false;report('Editable project saved. SoundFont remains a separate file.');}catch(e){report(e.message);}});
  $('projectOpen').addEventListener('click',()=>$('projectFile').click());
  $('projectFile').addEventListener('change',async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;try{if(file.size>1048576)throw Error('Project file exceeds 1 MiB.');const p=JSON.parse(await file.text()),next=validateProject(p);if(dirty&&!confirm('Replace your unsaved arrangement?'))return;EK1.stopComposition();song=next;dirty=false;variation=0;$('composeKey').value=String(song.key);$('composeStyle').value=song.style;$('composeProgress').value=Object.hasOwn(C.progressions,p.progression)?p.progression:'Bright';if([4,8,16].includes(song.bars.length))$('composeBars').value=String(song.bars.length);rebuild();report('Project opened.'+(p.bank&&p.bank!==EK1.bankName?' Load '+String(p.bank).slice(0,200)+' for the original sound.':''));}catch(e){report('Could not open project: '+e.message);}});
- $('appendSection').addEventListener('click',()=>{try{settings();const length=Number($('composeBars').value);if(song.bars.length+length>64)throw Error('Songs are limited to 64 bars.');const next=C.create(song.key,$('composeProgress').value,length,song.style);const label=['Intro','Verse','Chorus','Bridge','Ending'][$('sectionType').selectedIndex];next.bars[0].section=label;song.bars.push(...next.bars);changed();rebuild();report(label+' added. '+song.bars.length+' bars total.');}catch(e){report(e.message);}});
+ $('appendSection').addEventListener('click',()=>{try{settings();const length=Number($('composeBars').value);if(song.bars.length+length>64)throw Error('Songs are limited to 64 bars.');const next=C.create(song.key,$('composeProgress').value,length,song.style,song.feel??'Original');const label=['Intro','Verse','Chorus','Bridge','Ending'][$('sectionType').selectedIndex];next.bars[0].section=label;song.bars.push(...next.bars);changed();rebuild();report(label+' added. '+song.bars.length+' bars total.');}catch(e){report(e.message);}});
  $('removeSection').addEventListener('click',()=>{let i=song.bars.length-1;while(i>=0&&!song.bars[i].section)i--;if(i<=0){report('Keep at least one section.');return;}song.bars.splice(i);changed();rebuild();report('Last section removed. '+song.bars.length+' bars remain.');});
  if(!window.lamejs?.Mp3Encoder){$('audioFormat').querySelector('option[value=mp3]').disabled=true;}
  $('audioFormat').addEventListener('change',()=>{const mp3=$('audioFormat').value==='mp3';$('wavBitsLabel').hidden=mp3;$('mp3RateLabel').hidden=!mp3;});

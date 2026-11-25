@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v0.9.1. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.9.2. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.9.1';
+  const VERSION = '0.9.2';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];

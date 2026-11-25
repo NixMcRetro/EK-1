@@ -411,7 +411,7 @@ footer {
 .song-builder summary span{font-weight:400;font-size:12px;letter-spacing:0;margin-left:8px;}
 .compose-intro,.compose-hint,#composeStatus{font-size:12px;line-height:1.5;margin:9px 0;}
 .compose-hint{color:#535d54;font-size:11px;}
-.compose-settings{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;align-items:end;gap:8px;}
+.compose-settings{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) auto;align-items:end;gap:8px;}
 .compose-settings label{display:grid;gap:5px;font-size:10px;font-weight:800;letter-spacing:.04em;min-width:0;}
 .song-builder select,.song-builder input[type=number]{min-height:35px;width:100%;min-width:0;font-size:12px;color:#28322a;background:#f0eee4;border:1px solid #697369;border-radius:2px;padding:4px;}
 .song-builder button{min-height:36px;border:1px solid #535d54;border-bottom:3px solid #535d54;border-radius:2px;background:#f0eee4;color:#28322a;font-size:10px;font-weight:800;letter-spacing:.03em;padding:7px 11px;}

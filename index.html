@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
   <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twenty built-in voices, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.9.1</title>
+  <title>Electronic Keyboard (Model EK-1) v0.9.2</title>
   <link rel="stylesheet" href="./style.css">
   <script src="./midi.js" defer></script>
   <script src="./vendor/spessasynth-local.js" defer></script>
@@ -31,7 +31,7 @@
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
         <span class="product-spec">49 KEYS · DIGITAL SOUND</span>
-        <span class="version">v0.9.1</span>
+        <span class="version">v0.9.2</span>
       </div>
     </header>
 
@@ -135,13 +135,14 @@
     <p class="compose-intro">Choose a style, generate an arrangement, and edit any chord or melody note. Play it back or save a MIDI file.</p>
     <div class="compose-settings">
       <label>STYLE <select id="composeStyle"></select></label>
+      <label>FEEL <select id="composeFeel" aria-label="Arrangement feel"></select></label>
       <label>KEY <select id="composeKey"></select></label>
       <label>CHORD PATTERN <select id="composeProgress"></select></label>
       <label>LENGTH <select id="composeBars"><option value="4">4 bars</option><option value="8">8 bars</option><option value="16">16 bars</option></select></label>
       <label>TEMPO (BPM) <input id="composeTempo" type="number" min="60" max="180" value="112"></label>
       <button type="button" id="composeGenerate">NEW ARRANGEMENT</button>
     </div>
-    <p class="compose-hint">Key, chord pattern and length are applied by NEW ARRANGEMENT, which replaces the current notes. Style and tempo apply at playback.</p>
+    <p class="compose-hint">Key, chord pattern and length are applied by NEW ARRANGEMENT, which replaces the current notes. Style, tempo and feel apply at playback. Natural adds subtle groove; Expressive adds stronger variation; Original retains the earlier arrangement engine.</p>
     <div id="composeTracks" class="compose-tracks" aria-label="Song parts"></div>
     <div class="compose-table-wrap"><table class="compose-table"><thead><tr><th>BAR</th><th>CHORD</th><th>BEAT 1</th><th>BEAT 2</th><th>BEAT 3</th><th>BEAT 4</th></tr></thead><tbody id="composeRows"></tbody></table></div>
     <div class="compose-actions"><button id="composePlay" type="button">PLAY SONG</button><button id="composeMelody" type="button">NEW MELODY</button><button id="composeSave" type="button">EXPORT SONG MIDI</button></div>
