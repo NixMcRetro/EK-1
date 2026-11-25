@@ -50,7 +50,7 @@
           if(type===9&&b)add({kind:'on',channel,key:a,velocity:b});
           else if(type===8||type===9)add({kind:'off',channel,key:a});
           else if(type===12)add({kind:'program',channel,program:a});
-          else if(type===11&&[0,32,64,120,123].includes(a))add({kind:'control',channel,control:a,value:b});
+          else if(type===11&&[0,1,7,10,11,32,64,91,93,120,123].includes(a))add({kind:'control',channel,control:a,value:b});
         }else throw Error('Unsupported MIDI event.');
       }
       if(!seenEnd)throw Error('MIDI track is missing its end marker.');
@@ -59,7 +59,7 @@
     }
     events.sort((a,b)=>a.tick-b.tick||a.serial-b.serial);
     const states=Array.from({length:16},()=>({program:0,bankMSB:0,bankLSB:0,sustain:false,held:new Map(),deferred:[]}));
-    const notes=[];
+    const notes=[], controls=[];
     let tick=0,time=0,us=500000;
     const advance=to=>{time+=(to-tick)*us/(division*1e6);tick=to;if(time>MAX_SECONDS)throw Error('MIDI playback is limited to 30 minutes.');};
     const finish=(n,at)=>{notes.push({...n,duration:Math.max(.01,at-n.time)});};
@@ -86,7 +86,8 @@
           const down=e.value>=64;
           if(ch.sustain&&!down){for(const n of ch.deferred)finish(n,time);ch.deferred=[];}
           ch.sustain=down;
-        }else releaseAll(ch,time,e.control===120);
+        }else if(e.control===120||e.control===123)releaseAll(ch,time,e.control===120);
+        else controls.push({time,channel:e.channel,control:e.control,value:e.value});
       }
     }
     advance(lastTick);
@@ -94,7 +95,18 @@
     notes.sort((a,b)=>a.time-b.time||a.channel-b.channel);
     if(!notes.length)throw Error('This MIDI file has no playable notes.');
     const channels=[...new Set(notes.map(n=>n.channel))].sort((a,b)=>a-b);
-    return {format,division,tracks,notes,channels,duration:Math.max(time,...notes.slice(-1).map(n=>n.time+n.duration)),bytes:bytes.slice()};
+    return {format,division,tracks,notes,controls,channels,duration:Math.max(time,...notes.slice(-1).map(n=>n.time+n.duration)),bytes:bytes.slice()};
+  }
+  function timeline(song){
+    const events=[];
+    const round=t=>Math.round(t*1e9)/1e9;
+    for(const control of song.controls||[])events.push({...control,time:round(control.time),kind:'control'});
+    for(const note of song.notes){
+      events.push({time:round(note.time),kind:'on',note});
+      events.push({time:round(note.time+note.duration),kind:'off',note});
+    }
+    const order={off:0,control:1,on:2};
+    return events.sort((a,b)=>a.time-b.time||order[a.kind]-order[b.kind]);
   }
   function toneFor(program) {
     const p=program&127;
@@ -138,5 +150,5 @@
     const u32=n=>[(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255];
     return Uint8Array.from([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,...u32(track.length),...track]);
   }
-  root.EK1MIDI=Object.freeze({parse,encodeTake,toneFor,drumFor,MAX_BYTES});
+  root.EK1MIDI=Object.freeze({parse,encodeTake,timeline,toneFor,drumFor,MAX_BYTES});
 })(globalThis);

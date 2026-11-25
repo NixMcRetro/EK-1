@@ -1,16 +1,14 @@
 {
   "name": "ek-1",
-  "version": "0.6.0",
+  "version": "0.9.0",
   "private": true,
+  "description": "Electronic Keyboard (Model EK-1)",
+  "license": "GPL-3.0-or-later",
   "scripts": {
-    "build": "node scripts/build-soundfont.mjs",
-    "test": "node .github/tests/ek1-midi-codec.mjs"
-  },
-  "dependencies": {
-    "spessasynth_lib": "4.4.10"
+    "test": "node .github/tests/ek1-integrity.mjs && node .github/tests/ek1-midi-codec.mjs",
+    "test:browser": "node .github/tests/ek1-browser-smoke.mjs && node .github/tests/ek1-fm-audio.mjs && node .github/tests/ek1-soundfont-browser.mjs && node .github/tests/ek1-composition-browser.mjs"
   },
   "devDependencies": {
-    "esbuild": "0.25.12",
     "playwright": "1.57.0"
   }
 }

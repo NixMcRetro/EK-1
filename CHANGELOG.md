@@ -2,6 +2,33 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.0] - Offline release candidate
+
+- Refined note holds, rests and melody variation; unsaved-arrangement protection.
+- Cancellable audio export and clearer mobile octave navigation.
+- Verified FluidR3 GM reference bank playback, MIDI stop, stereo MP3/WAV export and project round trip.
+- External FluidR3 GM download recommendation with creator attribution; no bundled sound banks.
+- Full third-party licence inventory, separate unmodified MP3 encoder and corresponding source.
+- Updated offline documentation; removed obsolete server-based setup instructions.
+
+## [0.8.0] - Project and audio preview
+
+- Editable `.ek1` projects, labelled song sections, per-part volume and pan.
+- Quarter, eighth and sixteenth-note grids with rests and holds.
+- Faster-than-real-time stereo PCM WAV rendering using the actual loaded SoundFont or classic synthesis.
+- Local stereo MP3 export via pinned lamejs 1.2.1, with upstream source and licence.
+
+## [0.7.0] - Composition preview
+
+- Four-part song builder, six styles, four chord patterns and editable 4/8/16-bar songs.
+- Per-part mute, instrument selection, chord and melody editing, MIDI format-1 export.
+- Retains the direct-file SoundFont bridge and ordered MIDI playback fix.
+
+## [0.6.1] - Playback fix preview
+
+- Ordered MIDI note-off/on queue and per-note sampled voice tracking.
+- Channel volume, expression and pan playback; classic audio node cleanup.
+
 ## [0.6.0] - Unreleased
 
 ### Changed

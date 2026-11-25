@@ -1,103 +1,31 @@
 # Electronic Keyboard (Model EK-1)
 
-A simple, 1990s home-keyboard-inspired instrument that plays in your browser.
+Development version **0.9.0**. A 49-key browser instrument inspired by classic home keyboards, with 12 classic voices, eight original six-operator FM voices, six rhythms, five original demos, MIDI playback, and a four-part Song Builder. No affiliation with Casio or Yamaha.
 
-**Development version: 0.6.0**
+## Start playing
 
-Play a 49-key electronic keyboard, choose from 20 built-in voices (12 classic and 8 FM) and 6 rhythms, and listen to five original built-in demo songs. Includes one-finger chord accompaniment, a melody-off play-along mode, and basic note recording.
+Extract the whole ZIP and open `index.html` in a current browser. No local server, installer, account, network access or terminal is required. Keep the supporting files next to the HTML file. Click a key to enable audio. Computer keys Z through M and Q through U play two octaves; the on-screen keyboard spans C3 to C7. Mobile octave navigation is next to the keys.
 
-EK-1 is an original instrument and is not affiliated with Casio.
+## Instruments and SoundFonts
 
-## Getting started
+Choose a Classic or FM voice in VOICE. FM offers brightness, attack and release. Use OPEN SOUNDFONT to open a local SF2/SF3 bank (maximum 512 MiB). No SoundFont is included. [FluidR3 GM](https://www.pianobooster.org/download.html) by Frank Wen is the recommended optional download (148 MB, MIT). Extract the downloaded bank if necessary, then open the SF2 file with the file picker. Imported SoundFonts stay available while switching Classic or FM voices. MIDI playback and composition use a loaded SoundFont, otherwise the built-in approximations. Bank files are never uploaded. Loading large banks, especially compressed SF3, can use more memory than the file size.
 
-Open `index.html` locally in a modern browser or serve the repository with any static web server. The keyboard uses the Web Audio API. Audio starts when you interact with the keyboard.
+## Song Builder
 
-Computer keyboard shortcuts play two octaves: `Z S X D C V G B H N J M` and `Q 2 W 3 E R 5 T 6 Y 7 U`. Mouse and touch input can play the entire 49-key keyboard. On small screens, swipe horizontally or use LOWER KEYS / HIGHER KEYS. The mobile view opens at C4, and you can move left to play the lower chord octave.
+Choose a style, key, pattern and length, then NEW ARRANGEMENT. Edit individual chords and melody notes, mute or change instruments, adjust track levels and pan, and append labelled sections up to 64 bars. A rest is silent; Hold extends the preceding note. New melody generates variations. Save and reopen editable `.ek1` projects; replacing an edited project prompts you to save first. Projects store the bank filename, not the actual samples. Reopen the bank to reproduce the original instruments.
 
-### Design
+Export a multitrack MIDI file or stereo audio using the actual selected bank. WAV: 44.1/48 kHz, 16/24-bit PCM. MP3: 128/192/256/320 kbps. Rendering is local and cancellable; classic OfflineAudioContext rendering may finish its current render before cancellation takes effect. Audio exports are limited to five minutes and include a two-second release tail. Live FM and accompaniment are not recorded into Song Builder audio. MIDI import supports formats 0 and 1, up to 8 MiB and 30 minutes, with tempo changes, channel volume, pan, expression, sustain and program/bank selection. Full GM/GS/XG controllers, pitch bend, hardware MIDI, DX7 SysEx and arbitrary MIDI song editing are not implemented.
 
-EK-1 v0.2.0 deliberately borrows **design principles**, not branding or artwork, from late-1980s and early-1990s home keyboards. It uses a one-piece dark instrument chassis, a small recessed green LCD, speaker grilles, printed sound lists, square tactile controls and a full-width piano manual. Desktop and mobile Playwright screenshots are uploaded with the GitHub Actions test run for review. See [DESIGN.md](DESIGN.md) for reference links and implementation guidelines.
+## Offline architecture and licensing
 
-## Choosing a voice
+The runtime is an ordinary set of HTML, CSS and JavaScript files, not a server application. The SpessaSynth local bridge replaces the AudioWorklet entrypoint with a legacy ScriptProcessorNode for file:// compatibility. This may use more main-thread CPU and have higher latency. Browser support varies; direct local-file navigation is a release test requirement. See `THIRD-PARTY-NOTICES.txt`, `licenses/`, and `vendor/sources/` for dependencies, original notices, source and modification details. The original EK-1 application is licensed under GPL-3.0-or-later; see LICENSE. Third-party licence rights are preserved. LAME is an unmodified separate script, replaceable with an interface-compatible build. No restrictions are imposed on exercise of the third-party licence rights or reverse engineering needed to debug changes to the LAME library.
 
-Use the single VOICE menu on the instrument. It groups Classic keyboard, FM synthesis and any loaded SoundFont voices. The active engine is shown beside the selector. FM shaping controls appear on the faceplate only while an FM voice is selected. Selecting a classic or FM voice does not unload a SoundFont; MIDI songs continue to use the loaded bank, while the keys can play any engine. To remove an imported bank, use REMOVE SOUNDFONT.
+## Static hosting
 
-The voice and shaping controls are locked during a recording to preserve its instrument. A SoundFont recording plays with its original bank while that bank remains loaded; if the bank is removed or replaced, playback uses a built-in approximation and displays a warning.
+Deploy this folder unchanged to GitHub Pages or another static host. Use `index.html` as the entry point. Keep the relative paths, `vendor/`, `licenses/` and source archives intact; no runtime build, CDN, server code, or automatic SoundFont downloads are needed. The original application is licensed under GPL-3.0-or-later.
 
-## MIDI songs
+This is a development release candidate, not a public release. No McRetro publication is authorised by this package. See CHANGELOG.md for version history.
 
-- OPEN MIDI: import a local Standard MIDI File (.mid or .midi), format 0 or 1, up to 8 MB and 30 minutes.
-- PLAY MIDI: play all imported channels simultaneously using the built-in approximations of General MIDI sounds; play the keyboard along with the song.
-- SAVE MIDI COPY: download the original imported file byte-for-byte.
-- EXPORT RECORDING: save a recorded keyboard performance as standard format-0 MIDI, preserving note timing and approximate instrument selections.
+## Licence and your music
 
-Tempo changes, channel program changes, note velocities, running status, sustain and basic percussion are supported. Pitch bend, most other MIDI controllers, bank selection, SMPTE timing, full GM timbres, MIDI hardware I/O and song editing are not implemented yet. Playback is limited to 64 simultaneous scheduled melodic voices. Recordings export played notes, not the accompaniment or audio. Files are processed locally and never uploaded.
-
-## SoundFont instrument banks
-
-The built-in keyboard still opens directly from index.html. To enable optional SoundFont synthesis, build and serve the project locally:
-
-```sh
-npm install
-npm run build
-python3 -m http.server 8000 --bind 127.0.0.1
-```
-
-Open http://127.0.0.1:8000/ in your browser. Deployed builds need HTTPS and the generated vendor/ directory. Do not distribute node_modules.
-
-1. Press OPEN SOUNDFONT and choose a local SF2 or SF3 bank (up to 512 MiB).
-2. Select a melodic preset in VOICE, then play the keyboard.
-3. Open and play a MIDI file to hear the bank's instruments. For accurate instrument assignments, use a complete General MIDI bank.
-4. Choose a Classic keyboard or FM synthesis voice in the same VOICE menu to switch without unloading the bank. Use REMOVE SOUNDFONT when you want to remove it.
-
-The bank is processed in your browser and is never uploaded or persisted. A separate keyboard channel allows play-along while a song uses MIDI channels 1–16. Built-in demos, rhythm and automatic accompaniment retain their original synthesizer. MIDI recording export includes bank/program numbers, not embedded samples. The sound may differ if a receiving player lacks the same bank. Imported MIDI uses the existing bounded note/tempo scheduler; this does not implement all MIDI controllers, pitch bend or complete GM/GS/XG playback yet. A bank is not bundled with this development version. Load your own legitimately obtained SoundFont.
-
-The optional AudioWorklet engine is [SpessaSynth](https://github.com/spessasus/spessasynth_lib), Apache-2.0 licensed; the build copies upstream licence/notice files into vendor/. No CDN or remote sound-bank requests are made at runtime.
-
-## FM synthesis
-
-Choose an FM synthesis voice in the main VOICE menu. The eight original voices are: Electric Tines, Crystal Bells, Rubber Bass, Digital Brass, Glass Pad, Reed Lead, Drawbar Organ and Digital Pluck.
-
-Brightness changes frequency-modulation depth; Attack changes the onset time; Release changes the fade after lifting a key. Settings apply to newly played notes. RESET SOUND restores the preset envelope and modulation depth. Choose a Classic keyboard or SoundFont voice in the same menu to leave FM mode. Loading a SoundFont automatically selects its first melodic voice.
-
-The native Web Audio engine uses six sine-wave operators per note with independent amplitude envelopes and several routing topologies. It does not emulate the Yamaha DX7, import DX7 SysEx patches, or implement its exact algorithms. All voice settings are original. FM recordings preserve their settings for in-memory playback, while MIDI export uses an approximate standard program number; a MIDI file does not store the FM patch. Imported MIDI, demo songs and rhythm accompaniment continue using the established playback engines.
-
-FM works without external dependencies, including in the standalone HTML preview.
-
-## Development status
-
-Version `0.6.0` unifies the voice controls across all three sound engines, and is not a stable `1.0.0`. Note recordings currently live in memory and disappear when the page reloads. They capture played notes, not the full accompanying rhythm track.
-
-The included tones are created using Web Audio synthesis, not sampled patches from an existing manufacturer.
-
-## Versioning
-
-EK-1 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) with `MAJOR.MINOR.PATCH`.
-
-- `0.1.0`: initial playable keyboard baseline
-- `0.2.0`: redesigned instrument-style controls, printed tone/rhythm guides, speaker grilles, recessed LCD and mobile octave navigation
-- `0.2.1`: compatible visual or control fixes
-- `0.3.0`: MIDI file import, multichannel playback and export
-- `0.4.0`: optional SF2/SF3 playback with a locally built AudioWorklet engine
-- `0.5.0`: original six-operator FM synthesis and eight voices
-- `0.6.0`: unified voice selector and contextual sound shaping
-- `0.7.0`: proposed music composition
-- `1.0.0`: first stable release
-- After `1.0.0`: PATCH for compatible fixes, MINOR for compatible features, MAJOR for breaking changes
-
-## Testing
-
-```sh
-node --check app.js
-node --check midi.js
-node --check fm.js
-node .github/tests/ek1-midi-codec.mjs
-npm install
-npm run build
-npx playwright install chromium firefox webkit
-node .github/tests/ek1-browser-smoke.mjs
-node .github/tests/ek1-soundfont-browser.mjs
-node .github/tests/ek1-fm-audio.mjs
-```
-
-The application is self-contained and has no connection to the retired OP-1 browser project.
+The original EK-1 application is licensed under GPL-3.0-or-later. The software licence does not impose GPL terms on independently created music or exported MIDI, WAV, MP3 or project files merely because EK-1 produced them. Third-party material remains subject to its respective rights and licence terms.

@@ -5,12 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
   <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twenty built-in voices, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.6.0</title>
+  <title>Electronic Keyboard (Model EK-1) v0.9.0</title>
   <link rel="stylesheet" href="./style.css">
   <script src="./midi.js" defer></script>
+  <script src="./vendor/spessasynth-local.js" defer></script>
+  <script src="./vendor/spessasynth-local-core.js" defer></script>
+  <script src="./local-audio.js" defer></script>
   <script src="./soundfont.js" defer></script>
   <script src="./fm.js" defer></script>
   <script src="./app.js" defer></script>
+  <script src="./composer.js" defer></script>
+  <script src="./vendor/lame.min.js" defer></script>
+  <script src="./audio-export.js" defer></script>
+  <script src="./composer-ui.js" defer></script>
 </head>
 <body>
 <main class="workbench">
@@ -23,7 +30,7 @@
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
         <span class="product-spec">49 KEYS · DIGITAL SOUND</span>
-        <span class="version">v0.6.0</span>
+        <span class="version">v0.9.0</span>
       </div>
     </header>
 
@@ -119,8 +126,31 @@
       <div class="keys" id="keys" role="group" aria-label="Playable piano keyboard from C3 to C7"></div>
     </div>
     <div class="keyboard-lip" aria-hidden="true"><span>EK-1 · 49 KEY</span><span>POLYPHONIC</span></div>
+    <div class="mobile-key-nav" aria-label="Move along the on-screen keyboard"><button id="keyLeft" type="button">◀ LOWER KEYS</button><span>SWIPE KEYS TO SCROLL</span><button id="keyRight" type="button">HIGHER KEYS ▶</button></div>
   </section>
 
+  <details class="song-builder" open>
+    <summary>SONG BUILDER <span>Make your own music</span></summary>
+    <p class="compose-intro">Choose a style, generate an arrangement, and edit any chord or melody note. Play it back or save a MIDI file.</p>
+    <div class="compose-settings">
+      <label>STYLE <select id="composeStyle"></select></label>
+      <label>KEY <select id="composeKey"></select></label>
+      <label>CHORD PATTERN <select id="composeProgress"></select></label>
+      <label>LENGTH <select id="composeBars"><option value="4">4 bars</option><option value="8">8 bars</option><option value="16">16 bars</option></select></label>
+      <label>TEMPO (BPM) <input id="composeTempo" type="number" min="60" max="180" value="112"></label>
+      <button type="button" id="composeGenerate">NEW ARRANGEMENT</button>
+    </div>
+    <p class="compose-hint">Key, chord pattern and length are applied by NEW ARRANGEMENT, which replaces the current notes. Style and tempo apply at playback.</p>
+    <div id="composeTracks" class="compose-tracks" aria-label="Song parts"></div>
+    <div class="compose-table-wrap"><table class="compose-table"><thead><tr><th>BAR</th><th>CHORD</th><th>BEAT 1</th><th>BEAT 2</th><th>BEAT 3</th><th>BEAT 4</th></tr></thead><tbody id="composeRows"></tbody></table></div>
+    <div class="compose-actions"><button id="composePlay" type="button">PLAY SONG</button><button id="composeMelody" type="button">NEW MELODY</button><button id="composeSave" type="button">EXPORT SONG MIDI</button></div>
+    <div class="compose-tools"><h3>PROJECT &amp; AUDIO</h3>
+      <div class="compose-actions"><button id="projectSave" type="button">SAVE PROJECT</button><button id="projectOpen" type="button">OPEN PROJECT</button><input id="projectFile" type="file" accept=".ek1,application/json" hidden><label>SECTION <select id="sectionType"><option>Intro</option><option selected>Verse</option><option>Chorus</option><option>Bridge</option><option>Ending</option></select></label><button id="appendSection" type="button">APPEND SECTION</button><button id="removeSection" type="button">REMOVE LAST SECTION</button></div>
+      <div class="compose-export-settings"><label>FORMAT <select id="audioFormat"><option value="wav">WAV (lossless)</option><option value="mp3">MP3 (compressed)</option></select></label><label>SAMPLE RATE <select id="audioRate"><option value="44100">44.1 kHz</option><option value="48000">48 kHz</option></select></label><label id="wavBitsLabel">BIT DEPTH <select id="audioBits"><option value="16">16-bit</option><option value="24">24-bit</option></select></label><label id="mp3RateLabel" hidden>BITRATE <select id="mp3Rate"><option value="128">128 kbps</option><option value="192">192 kbps</option><option value="256">256 kbps</option><option value="320" selected>320 kbps</option></select></label><button id="exportAudio" type="button">EXPORT AUDIO</button></div>
+      <button type="button" id="cancelExport" hidden>CANCEL EXPORT</button><progress id="audioProgress" max="1" value="0" hidden aria-label="Audio export progress"></progress><p class="compose-hint">Audio uses the loaded SoundFont, or Classic sounds if none is loaded. MP3 uses the bundled LAME encoder. Projects store notes and settings, not the SoundFont file.</p>
+    </div>
+    <p id="composeStatus" role="status" aria-live="polite">Your first arrangement is ready to play. Changes are kept until you close or reload the page.</p>
+  </details>
   <section class="midi-strip" aria-labelledby="midiHeading">
     <div class="midi-info">
       <h2 id="midiHeading">MIDI SONGS</h2>
@@ -143,18 +173,14 @@
       <button id="openBank" type="button">OPEN SOUNDFONT</button>
       <button id="closeBank" type="button" disabled>REMOVE SOUNDFONT</button>
     </div>
+    <p class="midi-note">Recommended: <a href="https://www.pianobooster.org/download.html" target="_blank" rel="noopener noreferrer">FluidR3 GM</a> by Frank Wen (external download, 148 MB, MIT). Download the SF2 file separately, extract if necessary, then choose OPEN SOUNDFONT. No banks are included or fetched automatically.</p>
     <p class="midi-note">Classic, FM and loaded SoundFont voices share the keyboard's VOICE menu. MIDI songs use the loaded SoundFont, if present, independently of your playing voice.</p>
   </section>
   <div class="under-keyboard">
     <p class="play-hint"><strong>Just play.</strong> Use the keys above, or your computer keyboard: <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> <kbd>D</kbd> <kbd>C</kbd> … then <kbd>Q</kbd> <kbd>2</kbd> <kbd>W</kbd> <kbd>3</kbd> <kbd>E</kbd> …</p>
-    <div class="mobile-key-nav" aria-label="Move along the on-screen keyboard">
-      <button id="keyLeft" type="button">◀ LOWER KEYS</button>
-      <span>SWIPE THE KEYS TO SCROLL</span>
-      <button id="keyRight" type="button">HIGHER KEYS ▶</button>
-    </div>
     <p class="small-print">Choose a voice and play, or press DEMO for one of five original songs. AUTO CHORD uses the lowest octave. Recording is temporary until you close or reload the page.</p>
   </div>
-  <footer>Electronic Keyboard · Model EK-1 · An original browser instrument inspired by classic home keyboards. Not affiliated with Casio or Yamaha.</footer>
+  <footer>Electronic Keyboard · Model EK-1 · An original browser instrument inspired by classic home keyboards. Not affiliated with Casio or Yamaha. · MP3 encoding: <a href="https://lame.sourceforge.io/">LAME</a> / <a href="https://github.com/zhuker/lamejs">lamejs 1.2.1</a> (LGPL). <a href="THIRD-PARTY-NOTICES.txt">Licences and credits</a>. Encoder source is included in the offline ZIP.</footer>
 </main>
 </body>
 </html>

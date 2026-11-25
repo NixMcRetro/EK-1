@@ -1,0 +1,13 @@
+EK-1 v0.9.0 - offline release candidate
+
+1. Extract the entire ZIP (do not open the HTML inside a ZIP preview).
+2. Double-click index.html. Keep the other files and folders beside it.
+3. Play the keyboard or open Song Builder. No server or launcher is required.
+4. Optional: download FluidR3 GM via the Sound Library link, or use your
+   own SF2/SF3 file. Click OPEN SOUNDFONT. No sound banks are bundled.
+5. Save your song as an editable .ek1 project, MIDI, WAV or MP3.
+
+Read THIRD-PARTY-NOTICES.txt and licenses/ for licence and source information.
+This candidate has not been published to McRetro. The browser tests were
+performed without a web server; literal file:// navigation was blocked by
+the test environment's administrator policy. macOS Safari is unverified.

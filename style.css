@@ -404,3 +404,28 @@ footer {
 .fm-panel .fm-shaping input:focus-visible,.fm-panel .fm-shaping button:focus-visible {outline-color:#ffe39a;}
 .fm-hint {font-size:10px;color:#c3c9c0;margin:6px 0 0;line-height:1.4;}
 @media(max-width:620px){.fm-panel .fm-shaping button {min-height:44px;}}
+/* Song builder follows the instrument's printed-control language. */
+.song-builder{margin:22px 4px 0;border-top:1px solid #a5aaa0;border-bottom:1px solid #a5aaa0;padding:12px 0;color:#303933;}
+.song-builder summary{cursor:pointer;font-size:12px;font-weight:900;letter-spacing:.09em;}
+.song-builder summary span{font-weight:400;font-size:12px;letter-spacing:0;margin-left:8px;}
+.compose-intro,.compose-hint,#composeStatus{font-size:12px;line-height:1.5;margin:9px 0;}
+.compose-hint{color:#535d54;font-size:11px;}
+.compose-settings{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;align-items:end;gap:8px;}
+.compose-settings label{display:grid;gap:5px;font-size:10px;font-weight:800;letter-spacing:.04em;min-width:0;}
+.song-builder select,.song-builder input[type=number]{min-height:35px;width:100%;min-width:0;font-size:12px;color:#28322a;background:#f0eee4;border:1px solid #697369;border-radius:2px;padding:4px;}
+.song-builder button{min-height:36px;border:1px solid #535d54;border-bottom:3px solid #535d54;border-radius:2px;background:#f0eee4;color:#28322a;font-size:10px;font-weight:800;letter-spacing:.03em;padding:7px 11px;}
+.song-builder button:hover:not(:disabled){background:#fffdf4;}.song-builder button:disabled{opacity:.5;}
+#composePlay{background:#c6d0bd;}
+.compose-tracks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:9px 0;}
+.compose-part{border-top:1px solid #b4b9ae;padding:7px 0;display:grid;gap:5px;font-size:12px;min-width:0;}
+.compose-part label{display:flex;align-items:center;gap:6px;font-weight:700;}.compose-part input{accent-color:#536853;}.compose-part span{font-size:12px;padding:8px 0;}
+.compose-table-wrap{overflow-x:auto;}.compose-table{border-collapse:collapse;width:100%;font-size:11px;table-layout:fixed;}.compose-table th,.compose-table td{padding:3px 4px;text-align:left;border-bottom:1px solid #b4b9ae;}.compose-table th:first-child{width:36px;}.compose-table thead th{font-size:9px;letter-spacing:.05em;}.compose-table select{min-height:32px;}
+.compose-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}.song-builder :focus-visible{outline:2px solid #384e36;outline-offset:2px;}
+@media(max-width:760px){.compose-settings{grid-template-columns:repeat(2,minmax(0,1fr));}.compose-tracks{grid-template-columns:repeat(2,minmax(0,1fr));}.compose-table th:first-child{width:27px;}.compose-table th,.compose-table td{padding:3px 2px;}.song-builder select,.song-builder button,.song-builder input[type=number]{min-height:44px;}.compose-table select{padding:2px;font-size:11px;}}
+
+.compose-tools{border-top:1px solid #b4b9ae;margin-top:14px;padding-top:12px}.compose-tools h3{font-size:11px;letter-spacing:.07em;margin:0;color:#444b40}.compose-export-settings{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-top:10px}.compose-export-settings label{display:grid;gap:4px;font-size:10px;font-weight:700;letter-spacing:.04em}.compose-export-settings [hidden],#audioProgress[hidden]{display:none!important}.compose-export-settings select{min-width:100px}.compose-tools progress{width:100%;height:12px;margin:8px 0;accent-color:#536853}.mix-control{display:flex;gap:5px;align-items:center;font-size:10px}.mix-control input{width:100%;min-width:0}.section-bar{font-size:10px;display:block;color:#586052}.song-builder button:disabled{opacity:.6}
+
+.melody-stack{display:grid;gap:3px}.compose-table td>select+select{display:block;margin-top:3px;font-size:10px;max-width:100%}
+
+/* Release candidate: usable section labels, visible focus and mobile octave navigation. */
+.compose-table th:first-child{width:68px}.section-bar{overflow-wrap:anywhere}.compose-table select{max-width:100%}.instrument .mobile-key-nav{color:#f1f1e8;padding:6px 10px}.instrument .mobile-key-nav button{color:#222}.song-builder #cancelExport[hidden]{display:none!important}.song-builder #cancelExport{margin-top:8px}.compose-tools a:focus-visible,footer a:focus-visible{outline:2px solid currentColor;outline-offset:3px}@media(max-width:760px){.compose-table th:first-child{width:54px}.compose-table{min-width:420px}}

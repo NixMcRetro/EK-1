@@ -1,8 +1,8 @@
-/* Electronic Keyboard (Model EK-1) v0.6.0. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.9.0. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.6.0';
+  const VERSION = '0.9.0';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -108,7 +108,7 @@
   let tone = 0, rhythm = 0, tempo = 116, volume = .7, melodyOff = false, autoChord = false;
   let heldChord = null, recording = false, take = [], takeStart = 0, recordTimer = null;
   let importedMidi = null, midiName = '', importRequest = 0;
-  let bank = null, bankLoading = false;
+  let bank = null, bankLoading = false, bankFileRef = null;
   let engine='classic', fmIndex=0, bankVoiceIndex=0, bankGeneration=0;
   const fmSettings={brightness:1,attack:1,release:1};
   const held = new Map(), pending = new Set(), cancelled = new Set(), lights = new Map(), timers = new Set(), keyElements = new Map();
@@ -180,7 +180,7 @@
     $('clearTake').disabled = take.length === 0 || recording;
     $('exportTake').disabled = take.length === 0 || recording;
     $('playMidi').disabled = !importedMidi || recording;
-    $('playMidi').textContent = transport?.type === 'midi' ? 'STOP MIDI' : 'PLAY MIDI';
+    $('playMidi').textContent = transport?.type === 'midi' && !transport.composing ? 'STOP MIDI' : 'PLAY MIDI';
     $('saveMidi').disabled = !importedMidi;
     $('openMidi').disabled = recording;
     $('openBank').disabled = bankLoading || recording || !!window.EK1Standalone;
@@ -191,6 +191,7 @@
     for(const id of ['fmBrightness','fmAttack','fmRelease','fmReset'])$(id).disabled=engine!=='fm'||recording||bankLoading;
     $('record').disabled = bankLoading;
     if(bankLoading)$('playMidi').disabled=true;
+    document.dispatchEvent(new Event('ek1-transport'));
   }
   function createBus() {
     const bus = ctx.createGain();
@@ -198,7 +199,8 @@
     bus.connect(master);
     return bus;
   }
-  function voice(midi, at, duration, instrument, velocity = .26, bus = master, heldVoice = false) {
+  function voice(midi, at, duration, instrument, velocity = .26, bus = master, heldVoice = false, audioContext = ctx) {
+    const ctx=audioContext;
     const patch = TONES[instrument] || TONES[0];
     const start = Math.max(ctx.currentTime, at);
     const output = ctx.createGain();
@@ -208,7 +210,7 @@
     filter.Q.value = .4;
     output.connect(filter).connect(bus);
     const count = patch.harmonics.length;
-    const oscs = [];
+    const oscs = [], amps = [];
     for (let i = 0; i < count; i++) {
       const osc = ctx.createOscillator(), amp = ctx.createGain();
       osc.type = patch.wave;
@@ -216,21 +218,27 @@
       amp.gain.value = patch.harmonics[i] / count;
       osc.connect(amp).connect(output);
       osc.start(start);
-      oscs.push(osc);
+      oscs.push(osc); amps.push(amp);
     }
     output.gain.setValueAtTime(.0001, start);
     output.gain.linearRampToValueAtTime(velocity, start + patch.attack);
+    let offAt=Infinity, ended=0;
+    oscs.forEach(osc=>osc.onended=()=>{if(++ended===oscs.length){for(const node of [...oscs,...amps,output,filter])node.disconnect();}});
     const release = when => {
-      const off = Math.max(ctx.currentTime, when, start + patch.attack + .005);
+      const off = Math.max(ctx.currentTime, when, start + .001);
+      if(off>=offAt)return;offAt=off;
+      const gain=Math.max(.0001,velocity*Math.min(1,(off-start)/patch.attack));
       output.gain.cancelScheduledValues(off);
-      output.gain.setValueAtTime(Math.max(.0001, output.gain.value), off);
+      if(off<start+patch.attack)output.gain.linearRampToValueAtTime(gain,off);
+      else output.gain.setValueAtTime(gain,off);
       output.gain.exponentialRampToValueAtTime(.0001, off + patch.release);
       oscs.forEach(osc => { try { osc.stop(off + patch.release + .025); } catch (_) {} });
     };
-    if (!heldVoice) release(start + Math.max(duration, patch.attack + .01));
+    if (!heldVoice) release(start + Math.max(duration, .01));
     return { release };
   }
-  function drum(kind, at, strength, bus) {
+  function drum(kind, at, strength, bus, audioContext = ctx, noiseBuffer = noise) {
+    const ctx=audioContext, noise=noiseBuffer;
     const time = Math.max(ctx.currentTime, at);
     if (kind === 'kick') {
       const o = ctx.createOscillator(), g = ctx.createGain();
@@ -239,7 +247,7 @@
       o.frequency.exponentialRampToValueAtTime(47, time + .13);
       g.gain.setValueAtTime(strength * .75, time);
       g.gain.exponentialRampToValueAtTime(.001, time + .23);
-      o.connect(g).connect(bus); o.start(time); o.stop(time + .25);
+      o.connect(g).connect(bus); o.onended=()=>{o.disconnect();g.disconnect();}; o.start(time); o.stop(time + .25);
       return;
     }
     const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
@@ -248,7 +256,7 @@
     f.frequency.value = kind === 'snare' ? 1300 : 5200;
     g.gain.setValueAtTime(strength * (kind === 'snare' ? .45 : .16), time);
     g.gain.exponentialRampToValueAtTime(.001, time + (kind === 'snare' ? .16 : .045));
-    src.connect(f).connect(g).connect(bus);
+    src.connect(f).connect(g).connect(bus); src.onended=()=>{src.disconnect();f.disconnect();g.disconnect();};
     src.start(time); src.stop(time + (kind === 'snare' ? .18 : .06));
   }
   function drumsForStep(step, at, pattern, bus) {
@@ -306,7 +314,8 @@
       const b = transport.bus, now = ctx.currentTime;
       b.gain.cancelScheduledValues(now);
       b.gain.setTargetAtTime(.00001, now, .02);
-      setTimeout(() => { try { b.disconnect(); } catch (_) {} }, 2500);
+      const channels=transport.channelBuses||[];
+      setTimeout(() => { try { channels.forEach(c=>{c.gain.disconnect();c.pan?.disconnect();}); b.disconnect(); } catch (_) {} }, 2500);
     }
     transport = null;
     reflectButtons();
@@ -439,7 +448,7 @@
     stopTransport(false);
     const bus = createBus();
     if(bank && take.every(n=>n.bankGeneration===bankGeneration)){
-      transport={type:'take',song:EK1MIDI.parse(EK1MIDI.encodeTake(take)),index:0,start:ctx.currentTime+.08,active:[],bus,sampleBank:bank};
+      transport=makeMidiTransport('take',EK1MIDI.parse(EK1MIDI.encodeTake(take)),bank,bus);
       loop=setInterval(midiTick,25);reflectButtons();show('PLAYING RECORDING',take.length+' NOTES');midiTick();return;
     }
     transport = { type: 'take', bus };
@@ -479,48 +488,75 @@
     const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
+  function makeMidiTransport(type,song,sampleBank,bus){
+    const tr={type,song,index:0,controlIndex:0,start:ctx.currentTime+.08,active:[],bus,sampleBank};
+    if(sampleBank){sampleBank.stopSong();tr.events=EK1MIDI.timeline(song);}
+    else {
+      tr.channelBuses=Array.from({length:16},()=>{
+        const gain=ctx.createGain(),pan=ctx.createStereoPanner?.();
+        gain.gain.value=100/127;
+        if(pan)gain.connect(pan).connect(bus);else gain.connect(bus);
+        return {gain,pan,volume:100,expression:127};
+      });
+    }
+    return tr;
+  }
   function midiTick() {
     const tr=transport;
     if(!tr||(tr.type!=='midi'&&!tr.sampleBank))return;
     const now=ctx.currentTime;
     if(tr.sampleBank){
+      // Dispatch a single chronological queue. Offs precede ons at a shared
+      // tick; no early note-on can overtake a still-pending note-off.
       let work=0;
-      for(let i=tr.active.length-1;i>=0;i--)if(tr.active[i].end<=now){tr.sampleBank.songOff(tr.active[i].note);tr.active.splice(i,1);}
-      while(tr.index<tr.song.notes.length && tr.start+tr.song.notes[tr.index].time<=now+.005 && work++<128){
-        const n=tr.song.notes[tr.index++], end=tr.start+n.time+n.duration;
-        if(end<=now||tr.active.length>=64)continue;
-        tr.sampleBank.songOn(n);tr.active.push({note:n,end});lamp(n.key,now,end-now);
+      while(tr.index<tr.events.length && tr.start+tr.events[tr.index].time<=now && work++<2048){
+        const e=tr.events[tr.index++],n=e.note;
+        if(e.kind==='control'){tr.sampleBank.songControl(e);continue;}
+        if(e.kind==='off'){tr.sampleBank.songOff(n);continue;}
+        const end=tr.start+n.time+n.duration;
+        if(end<=now)continue;
+        tr.sampleBank.songOn(n);lamp(n.key,now,end-now);
       }
-      if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show(tr.type==='take'?'PLAYBACK FINISHED':'MIDI FINISHED','PRESS PLAY TO REPEAT');}
+      if(tr.index===tr.events.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show(tr.type==='take'?'PLAYBACK FINISHED':'MIDI FINISHED','PRESS PLAY TO REPEAT');}
       return;
     }
+    const controls=tr.song.controls||[];
+    while(tr.controlIndex<controls.length&&tr.start+controls[tr.controlIndex].time<now+.135){
+      const e=controls[tr.controlIndex++],c=tr.channelBuses[e.channel],at=Math.max(now,tr.start+e.time);
+      if(e.control===7)c.volume=e.value;else if(e.control===11)c.expression=e.value;
+      if(e.control===7||e.control===11)c.gain.gain.setTargetAtTime(c.volume*c.expression/(127*127),at,.005);
+      if(e.control===10&&c.pan)c.pan.pan.setTargetAtTime((e.value-64)/64,at,.005);
+    }
     tr.active=tr.active.filter(n=>n.end>now);
-    // Schedule only a short window of music. Cap per-tick work and polyphony
-    // to keep even dense imported files from overwhelming the browser.
     let work=0;
     while(tr.index<tr.song.notes.length && tr.start+tr.song.notes[tr.index].time<now+.13 && work++<128){
-      const n=tr.song.notes[tr.index++], at=tr.start+n.time, end=at+n.duration;
+      const n=tr.song.notes[tr.index++],at=tr.start+n.time,end=at+n.duration;
       if(end<=now)continue;
-      const begin=Math.max(at,now);
+      const begin=Math.max(at,now),channel=tr.channelBuses[n.channel].gain;
       if(n.channel===9){
-        if(at>=now-.12)drum(EK1MIDI.drumFor(n.key),begin,n.velocity/127*.55,tr.bus);
+        if(at>=now-.12)drum(EK1MIDI.drumFor(n.key),begin,n.velocity/127*.55,channel);
       }else if(tr.active.length<64){
-        const sound=voice(n.key,begin,Math.max(.01,end-begin),EK1MIDI.toneFor(n.program),n.velocity/127*.23,tr.bus);
-        tr.active.push({sound,end:end+.7});
-        lamp(n.key,begin,Math.max(.01,end-begin));
+        const sound=voice(n.key,begin,Math.max(.01,end-begin),EK1MIDI.toneFor(n.program),n.velocity/127*.23,channel);
+        tr.active.push({sound,end:end+.7});lamp(n.key,begin,Math.max(.01,end-begin));
       }
     }
-    if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){
-      stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');
-    }
+    if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');}
   }
   async function playMidi() {
-    if(transport?.type==='midi'){stopTransport();return;}
+    if(transport?.type==='midi'&&!transport.composing){stopTransport();return;}
     if(!importedMidi||recording||bankLoading||!await audio())return;
     stopTransport(false);
-    transport={type:'midi',song:importedMidi,index:0,start:ctx.currentTime+.08,active:[],bus:createBus(),sampleBank:bank};
+    transport=makeMidiTransport('midi',importedMidi,bank,createBus());
     loop=setInterval(midiTick,25);reflectButtons();
     show('MIDI PLAYBACK','PLAY ALONG ON THE KEYS');midiTick();
+  }
+  async function playComposition(bytes){
+    if(recording||bankLoading)throw Error('Finish recording or loading the bank first.');
+    const song=EK1MIDI.parse(bytes);
+    if(!await audio())throw Error('Audio is unavailable.');
+    stopTransport(false);
+    transport=makeMidiTransport('midi',song,bank,createBus());transport.composing=true;
+    loop=setInterval(midiTick,25);reflectButtons();show('SONG BUILDER','PLAY ALONG ON THE KEYS');midiTick();
   }
   function exportTakeMidi(){
     if(!take.length||recording)return;
@@ -578,7 +614,7 @@
       // Keep the previous bank if validation or engine loading fails.
       const next=await EK1SoundFont.create(ctx,master,bytes);
       if(transport)stopTransport(false);stopHeld();
-      bank?.destroy();bank=next;bankGeneration++;bankVoiceIndex=0;engine='soundfont';rebuildVoices();updateFM();
+      bank?.destroy();bank=next;bankFileRef=file;bankGeneration++;bankVoiceIndex=0;engine='soundfont';rebuildVoices();updateFM();
       bankMessage(file.name+' | '+bank.presets.length+' melodic voices');
       show('SOUNDFONT READY',bank.selected.name.toUpperCase());
     }catch(e){bankMessage('Could not open SoundFont: '+e.message+(bank?' (previous bank kept)':''));}
@@ -586,7 +622,7 @@
   }
   function unloadBank(){
     if(!bank||bankLoading||recording)return;
-    stopTransport(false);stopHeld();bank.destroy();bank=null;
+    stopTransport(false);stopHeld();bank.destroy();bank=null;bankFileRef=null;
     if(engine==='soundfont')engine='classic';
     rebuildVoices();updateFM();
     bankMessage('20 built-in voices. Add a local SoundFont to expand the voice menu.');
@@ -746,10 +782,19 @@
   // Read-only diagnosis surface for automated browser regressions, not an end-user API.
   window.EK1 = Object.freeze({
     version: VERSION,
+    playComposition,
+    get bankName(){return bankFileRef?.name||null;},
+    async renderComposition(bytes,rate,progress,signal){
+      if(recording||bankLoading)throw Error("Finish recording or loading your bank first.");
+      if(transport)stopTransport(false);stopHeld();
+      return EK1AudioExport.render(EK1MIDI.parse(bytes),rate,bankFileRef,volume,voice,drum,progress,signal);
+    },
+    stopComposition(){if(transport?.composing)stopTransport();},
+    downloadComposition(bytes){downloadMidi(bytes,'EK-1-song.mid');},
     tones: TONES.length,
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
-    get state() { return { transport: transport?.type || 'stopped', recording, takeNotes: take.length, demoIndex: transport?.type === 'demo' ? transport.song : null, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    get state() { return { transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: transport?.type === 'demo' ? transport.song : null, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoBars: index => SONGS[index]?.bars,
     parseBar
