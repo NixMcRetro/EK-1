@@ -26,6 +26,7 @@ jobs:
           node --check app.js
           node --check midi.js
           node --check soundfont.js
+          node --check fm.js
       - name: Test MIDI codec
         run: node .github/tests/ek1-midi-codec.mjs
       - name: Install browser test dependencies
@@ -35,13 +36,15 @@ jobs:
           npx playwright install --with-deps chromium firefox webkit
       - name: Run EK-1 keyboard regression
         run: node .github/tests/ek1-browser-smoke.mjs
+      - name: Render actual FM audio
+        run: node .github/tests/ek1-fm-audio.mjs
       - name: Verify actual SoundFont synthesis
         run: node .github/tests/ek1-soundfont-browser.mjs
       - name: Save desktop and mobile visual review
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ek1-v0.4.0-visual-review
+          name: ek1-v0.5.0-visual-review
           path: artifacts/*.png
           retention-days: 30
           if-no-files-found: warn
