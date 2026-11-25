@@ -5,7 +5,7 @@ import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
 import {testSoundFont} from './ek1-sf2-fixture.mjs';
 for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
- const browser=await engine.launch({headless:true});
+ const browser=await engine.launch({headless:true,...(name==='firefox'?{firefoxUserPrefs:{'media.autoplay.default':0,'media.autoplay.blocking_policy':0}}:{})});
  try{
  const page=await browser.newPage();await page.goto(pathToFileURL(resolve('index.html')).href);
  assert.equal(await page.locator('#volume').inputValue(),'25');
@@ -15,6 +15,20 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   const buffer=await ctx.startRendering();return buffer.getChannelData(0).reduce((p,x)=>Math.max(p,Math.abs(x)),0);
  });
  assert(peak>0&&peak<=.3501,'output ceiling '+peak);
+ // Headless Firefox/WebKit may have no real-time audio sink. Check their
+ // rendered stereo samples and output-stage gain, not a silent analyser.
+ const levels=await page.evaluate(async()=>{
+  const results=[];
+  for(const volume of [.25,0]){
+   const c=new OfflineAudioContext(2,24000,48000),stage=EK1Levels.create(c,c.destination,volume);
+   const a=c.createOscillator(),b=c.createOscillator(),g=c.createGain();a.frequency.value=220;b.frequency.value=440;g.gain.value=5;
+   a.connect(g);b.connect(g);g.connect(stage.input);a.start();b.start();const out=await c.startRendering();
+   results.push(Math.max(...[0,1].map(ch=>out.getChannelData(ch).reduce((p,n)=>Math.max(p,Math.abs(n)),0))));
+  }return results;
+ });
+ assert(levels[0]>0&&levels[0]<=.0876,'default ceiling');assert.equal(levels[1],0,'offline mute');
+ if(name!=='chromium'){console.log('PASS',name,'offline output ceiling, startup gain, mute; live transport covered by smoke tests',levels);continue;}
+ // Chromium provides a measurable real-time output in CI.
  await page.locator('#volume').evaluate(el=>{el.value='100';el.dispatchEvent(new Event('input',{bubbles:true}));});
  const peaks=[];
  async function measure(label){
