@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
   <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twelve tones, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.2.0</title>
+  <title>Electronic Keyboard (Model EK-1) v0.3.0</title>
   <link rel="stylesheet" href="./style.css">
+  <script src="./midi.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -20,7 +21,7 @@
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
         <span class="product-spec">49 KEYS · DIGITAL SOUND</span>
-        <span class="version">v0.2.0</span>
+        <span class="version">v0.3.0</span>
       </div>
     </header>
 
@@ -105,6 +106,21 @@
       <div class="keys" id="keys" role="group" aria-label="Playable piano keyboard from C3 to C7"></div>
     </div>
     <div class="keyboard-lip" aria-hidden="true"><span>EK-1 · 49 KEY</span><span>POLYPHONIC</span></div>
+  </section>
+
+  <section class="midi-strip" aria-labelledby="midiHeading">
+    <div class="midi-info">
+      <h2 id="midiHeading">MIDI SONGS</h2>
+      <p id="midiStatus" role="status" aria-live="polite">Open a MIDI file to listen or play along.</p>
+    </div>
+    <div class="midi-controls">
+      <input id="midiFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" hidden>
+      <button id="openMidi" type="button">OPEN MIDI</button>
+      <button id="playMidi" type="button" disabled>PLAY MIDI</button>
+      <button id="saveMidi" type="button" disabled>SAVE MIDI COPY</button>
+      <button id="exportTake" type="button" disabled>EXPORT RECORDING</button>
+    </div>
+    <p class="midi-note">MIDI stores notes, not audio. Imported parts use EK-1's current twelve sounds; full General MIDI instrument banks are planned for a later version.</p>
   </section>
 
   <div class="under-keyboard">
