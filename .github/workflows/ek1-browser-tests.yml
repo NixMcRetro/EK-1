@@ -22,7 +22,11 @@ jobs:
         with:
           node-version: '22'
       - name: Verify JavaScript syntax
-        run: node --check app.js
+        run: |
+          node --check app.js
+          node --check midi.js
+      - name: Test MIDI codec
+        run: node .github/tests/ek1-midi-codec.mjs
       - name: Install browser test dependencies
         run: |
           npm install --no-save playwright@1.57.0
@@ -33,7 +37,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ek1-v0.2.0-visual-review
+          name: ek1-v0.3.0-visual-review
           path: artifacts/*.png
           retention-days: 30
           if-no-files-found: warn
