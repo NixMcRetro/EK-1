@@ -35,6 +35,8 @@ jobs:
         run: node .github/tests/ek1-soundfont-browser.mjs
       - name: Output ceiling and level regression
         run: node .github/tests/ek1-output-levels.mjs
+      - name: Pause and demo voice regression
+        run: node .github/tests/ek1-pause-browser.mjs
       - name: Composition, project and audio export
         run: node .github/tests/ek1-composition-browser.mjs
       - name: Package exactly the tested source
