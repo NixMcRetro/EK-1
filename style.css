@@ -389,3 +389,18 @@ footer {
 .midi-controls #fmToggle[aria-pressed=true] { background:#b9c9ae;color:#182d21;border-bottom-color:#607456; }
 .fm-shaping input:focus-visible,.fm-shaping button:focus-visible { outline:3px solid #384e36;outline-offset:3px; }
 @media(max-width:620px){.fm-shaping {grid-template-columns:repeat(2,minmax(0,1fr));}.fm-shaping button {min-height:44px;}}
+
+/* One voice selector, one continuous faceplate. FM controls only appear when needed. */
+.voice-title {display:flex;align-items:baseline;justify-content:space-between;gap:6px;}
+#activeEngine {font-size:9px;letter-spacing:.06em;color:#c5d4bc;font-weight:700;}
+#tone {text-overflow:ellipsis;}
+.fm-panel {border-bottom:1px solid #737b73;padding:10px 0 12px;margin:0;color:#e0e4d9;}
+.fm-panel[hidden] {display:none!important;}
+.fm-panel h2 {font-size:10px;letter-spacing:.09em;margin:0 0 9px;color:#c5d4bc;}
+.fm-panel .fm-shaping {gap:8px;}
+.fm-panel .fm-shaping input {accent-color:#c1d0b7;}
+.fm-panel .fm-shaping button {min-height:32px;font-size:9px;}
+.fm-panel .fm-shaping output {color:#d7e1ce;}
+.fm-panel .fm-shaping input:focus-visible,.fm-panel .fm-shaping button:focus-visible {outline-color:#ffe39a;}
+.fm-hint {font-size:10px;color:#c3c9c0;margin:6px 0 0;line-height:1.4;}
+@media(max-width:620px){.fm-panel .fm-shaping button {min-height:44px;}}
