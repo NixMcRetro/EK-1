@@ -2,7 +2,19 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
-## [0.4.0] - Unreleased
+## [0.5.0] - Unreleased
+
+### Added
+- Native six-operator FM engine with eight original voices and independent envelopes.
+- Brightness, attack and release controls with reset and selectable FM mode.
+- In-memory FM recording playback with voice settings; standard approximate MIDI program numbers on export.
+- Offline audio render checks across browser engines, plus updated downloadable previews.
+
+### Limitations
+- No DX7 patch compatibility or emulation yet.
+- Imported MIDI and accompaniment use the established engines; FM mode targets live keyboard and recorded performances.
+
+## [0.4.0] - Verified development baseline
 
 ### Added
 - Optional user-supplied SF2/SF3 instrument banks through a locally bundled SpessaSynth AudioWorklet.
