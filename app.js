@@ -569,8 +569,8 @@
   function bankMessage(message){$('bankStatus').textContent=message;}
   async function loadBank(file){
     if(!file||bankLoading||recording)return;
-    if(file.size>EK1SoundFont.MAX_BYTES){bankMessage('SoundFont exceeds 128 MB.');return;}
-    bankLoading=true;reflectButtons();bankMessage('Opening '+file.name+'…');
+    if(file.size>EK1SoundFont.MAX_BYTES){bankMessage('SoundFont is '+(file.size/1048576).toFixed(1)+' MiB. Maximum is '+(EK1SoundFont.MAX_BYTES/1048576)+' MiB.');return;}
+    bankLoading=true;reflectButtons();bankMessage('Opening '+file.name+' ('+(file.size/1048576).toFixed(1)+' MiB)… Large banks may take a while.');
     try{
       if(!await audio())throw Error('Web Audio is unavailable.');
       if(transport)stopTransport(false);stopHeld();
