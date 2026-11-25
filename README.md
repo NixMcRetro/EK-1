@@ -30,6 +30,12 @@ EK-1 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) with `MA
 - `1.0.0`: first stable release
 - After `1.0.0`: PATCH for compatible fixes, MINOR for compatible features, MAJOR for breaking changes
 
+## Licence
+
+The original EK-1 application is licensed under the GNU General Public License, version 3 or (at your option) any later version (SPDX: GPL-3.0-or-later). See [LICENSE](LICENSE). Third-party components retain their respective licences and copyright notices.
+
+The software licence does not impose GPL terms on independently created music or exported MIDI, WAV, MP3 or project files merely because EK-1 produced them. Any third-party material remains subject to its own rights and licence terms. No affiliation with Casio or Yamaha is claimed.
+
 ## Testing
 
 ```sh
