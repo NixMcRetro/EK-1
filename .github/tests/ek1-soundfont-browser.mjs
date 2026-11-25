@@ -28,6 +28,33 @@ try{
  await page.locator('#tone').selectOption('fm-2');
  assert.equal(await page.evaluate(()=>EK1.state.engine),'fm');
  assert(await page.evaluate(()=>EK1.state.soundfont),'Bank must stay loaded in FM mode');
+ // All five demos must use the sample engine independently of the live FM voice.
+ for(let i=0;i<5;i++){
+   const score=await page.evaluate(i=>EK1.demoArrangement(i),i);
+   assert.deepEqual(score.channels,[0,1,2,9]);
+   assert(score.notes.some(n=>n.channel===0)&&score.notes.some(n=>n.channel===1)&&score.notes.some(n=>n.channel===2)&&score.notes.some(n=>n.channel===9));
+   assert.equal(score.notes.filter(n=>n.channel===0).length,await page.evaluate(i=>EK1.demoEvents(i).length,i));
+   await page.locator('#demoSong').selectOption(String(i));
+   await page.locator('#playDemo').click();
+   await page.waitForFunction(i=>EK1.state.demoIndex===i&&EK1.state.demoEngine==='soundfont'&&EK1.state.sampleKeys>0,i);
+   assert.equal(await page.evaluate(()=>EK1.state.engine),'fm');
+   await page.waitForFunction(()=>EK1.state.demoLeadKeys>0);
+   await page.locator('#melodyOff').click();
+   await page.waitForFunction(()=>EK1.state.demoLeadKeys===0);
+   await page.waitForTimeout(550);
+   assert.equal(await page.evaluate(()=>EK1.state.demoLeadKeys),0);
+   assert.equal(await page.evaluate(()=>EK1.state.transport),'demo');
+   await page.locator('#melodyOff').click();
+   await page.waitForFunction(()=>EK1.state.demoLeadKeys>0);
+   await page.locator('#stop').click();
+   await page.waitForFunction(()=>EK1.state.sampleVoices===0&&EK1.state.sampleKeys===0);
+ }
+ await page.locator('#playDemo').click();
+ await page.waitForFunction(()=>EK1.state.demoEngine==='soundfont');
+ await page.locator('#nextDemo').click();
+ await page.waitForFunction(()=>EK1.state.demoIndex===0&&EK1.state.demoEngine==='soundfont');
+ await page.locator('#stop').click();
+ await page.waitForFunction(()=>EK1.state.sampleKeys===0);
  await page.locator('#playMidi').click();
  await page.waitForFunction(()=>EK1.state.transport==='midi'&&EK1.state.sampleVoices>0);
  await page.locator('#stop').click();
@@ -41,6 +68,9 @@ try{
  assert.equal(await page.evaluate(()=>EK1.state.soundfont),false);
  assert.equal(await page.evaluate(()=>EK1.state.engine),'classic');
  assert.equal(await page.locator('#tone option').count(),20);
+ await page.locator('#playDemo').click();
+ await page.waitForFunction(()=>EK1.state.demoEngine==='classic');
+ await page.locator('#stop').click();
  assert.deepEqual(errors,[]);
  console.log('PASS actual SoundFont loading, live sample voice, imported MIDI, stop, invalid file and fallback');
 }finally{await browser.close();}
