@@ -1,9 +1,10 @@
-// Electronic Keyboard (Model EK-1) v0.2.0 browser regression.
+// Electronic Keyboard (Model EK-1) v0.3.0 browser regression.
 // Run with: node .github/tests/ek1-browser-smoke.mjs
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
-import {mkdirSync} from 'node:fs';
+import {mkdirSync, readFileSync} from 'node:fs';
+import '../../midi.js';
 import {chromium, firefox, webkit} from 'playwright';
 
 const url = pathToFileURL(resolve('index.html')).href;
@@ -17,7 +18,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(url, {waitUntil:'load'});
       await page.waitForFunction(() => !!window.EK1);
-      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.2\.0/);
+      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.3\.0/);
       const info = await page.evaluate(() => ({
         version: EK1.version,
         tones: EK1.tones,
@@ -26,7 +27,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         bars: Array.from({length:EK1.demos}, (_,i) => EK1.demoBars(i)),
         events: Array.from({length:EK1.demos}, (_,i) => EK1.demoEvents(i))
       }));
-      assert.equal(info.version, '0.2.0');
+      assert.equal(info.version, '0.3.0');
       assert.deepEqual([info.tones,info.rhythms,info.demos], [12,6,5]);
       assert.deepEqual(info.bars, [16,16,16,16,16]);
       for (const [i,events] of info.events.entries()) {
@@ -61,7 +62,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         assert(clippedKeys <= 2, 'All 49 keys should fit a wide desktop screen');
       }
       // Capture desktop/mobile appearances for human review of the physical design.
-      await page.screenshot({path: 'artifacts/ek1-v0.2.0-' + name + '-' + width + '.png', fullPage:true});
+      await page.screenshot({path: 'artifacts/ek1-v0.3.0-' + name + '-' + width + '.png', fullPage:true});
       await page.locator('#tone').selectOption('5');
       assert.match(await page.locator('#displayMain').textContent(),/TRUMPET/);
       await page.locator('#playDemo').click();
@@ -98,8 +99,34 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       await page.locator('#playTake').click();
       assert.equal(await page.evaluate(() => EK1.state.transport), 'take');
       await page.locator('#stop').click();
+      const recordingDownload=page.waitForEvent('download');
+      await page.locator('#exportTake').click();
+      const recordingFile=await recordingDownload;
+      const recorded=EK1MIDI.parse(readFileSync(await recordingFile.path()));
+      assert.equal(recorded.notes.length,1);
+      assert.equal(recorded.notes[0].key,72);
+      assert.equal(recorded.notes[0].program,56);
       await page.locator('#clearTake').click();
       assert.equal(await page.evaluate(() => EK1.state.takeNotes), 0);
+      const bytes=EK1MIDI.encodeTake([{midi:60,t:0,length:1,tone:0},{midi:48,t:0,length:1,tone:10}]);
+      await page.locator('#midiFile').setInputFiles({name:'test-song.mid',mimeType:'audio/midi',buffer:Buffer.from(bytes)});
+      await page.waitForFunction(()=>EK1.state.midiNotes===2);
+      assert.equal(await page.evaluate(()=>EK1.state.midiChannels),2);
+      assert.match(await page.locator('#midiStatus').innerText(),/2 notes/);
+      await page.locator('#playMidi').click();
+      await page.waitForFunction(()=>EK1.state.transport==='midi');
+      await page.keyboard.down('q');
+      await page.waitForFunction(()=>document.querySelector('[data-midi="72"]').classList.contains('pressed'));
+      await page.keyboard.up('q');
+      await page.locator('#stop').click();
+      assert.equal(await page.evaluate(()=>EK1.state.transport),'stopped');
+      const copyDownload=page.waitForEvent('download');
+      await page.locator('#saveMidi').click();
+      const copy=await copyDownload;
+      assert.deepEqual(readFileSync(await copy.path()),Buffer.from(bytes));
+      await page.locator('#midiFile').setInputFiles({name:'invalid.mid',mimeType:'audio/midi',buffer:Buffer.from([1,2,3])});
+      await page.waitForFunction(()=>document.querySelector('#midiStatus').textContent.includes('Could not open MIDI'));
+      assert.equal(await page.evaluate(()=>EK1.state.midiNotes),2);
       if (width === 390) {
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         assert(overflow <= 2, 'Unexpected horizontal page overflow: ' + overflow);
