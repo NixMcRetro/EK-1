@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
-  <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twelve tones, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.5.0</title>
+  <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twenty built-in voices, six rhythms and five original demo songs.">
+  <title>Electronic Keyboard (Model EK-1) v0.6.0</title>
   <link rel="stylesheet" href="./style.css">
   <script src="./midi.js" defer></script>
   <script src="./soundfont.js" defer></script>
@@ -23,7 +23,7 @@
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
         <span class="product-spec">49 KEYS · DIGITAL SOUND</span>
-        <span class="version">v0.5.0</span>
+        <span class="version">v0.6.0</span>
       </div>
     </header>
 
@@ -41,7 +41,7 @@
           </div>
           <div class="printed-banks">
             <div class="printed-bank">
-              <h2><span class="print-accent tone-accent"></span> TONE BANK</h2>
+              <h2><span class="print-accent tone-accent"></span> CLASSIC TONES</h2>
               <p>01 PIANO <span>02 E.PIANO</span> <span>03 ORGAN</span> <span>04 ACCORDION</span> <span>05 STRINGS</span> <span>06 TRUMPET</span> <span>07 BRASS</span> <span>08 MARIMBA</span> <span>09 SYNTH</span> <span>10 PAD</span> <span>11 BASS</span> <span>12 FLUTE</span></p>
             </div>
             <div class="printed-bank">
@@ -52,7 +52,7 @@
         </div>
 
         <div class="settings">
-          <label for="tone" class="setting tone-setting"><span class="setting-title">TONE</span><select id="tone" aria-label="Instrument sound"></select></label>
+          <label for="tone" class="setting tone-setting"><span class="setting-title voice-title">VOICE <span id="activeEngine">CLASSIC</span></span><select id="tone" aria-label="Instrument voice"></select></label>
           <label for="rhythm" class="setting rhythm-setting"><span class="setting-title">RHYTHM</span><select id="rhythm" aria-label="Rhythm style"></select></label>
           <label for="tempo" class="setting slider-setting"><span class="setting-title">TEMPO <output for="tempo" id="tempoValue" class="readout">116 BPM</output></span>
             <input id="tempo" type="range" min="60" max="180" step="1" value="116" aria-label="Tempo in beats per minute">
@@ -61,6 +61,17 @@
             <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Volume">
           </label>
         </div>
+
+        <section id="fmPanel" class="fm-panel" aria-labelledby="fmHeading" hidden>
+          <h2 id="fmHeading">FM SOUND SHAPING</h2>
+          <div class="fm-shaping">
+            <label>BRIGHTNESS <output id="fmBrightnessValue">100%</output><input id="fmBrightness" type="range" min="0" max="200" value="100" disabled></label>
+            <label>ATTACK <output id="fmAttackValue">100%</output><input id="fmAttack" type="range" min="25" max="400" value="100" disabled></label>
+            <label>RELEASE <output id="fmReleaseValue">100%</output><input id="fmRelease" type="range" min="25" max="400" value="100" disabled></label>
+            <button id="fmReset" type="button" disabled>RESET SOUND</button>
+          </div>
+          <p class="fm-hint">Changes apply to the next notes played. MIDI export uses approximate instrument numbers.</p>
+        </section>
 
         <div class="button-panel">
           <section class="control-group demo-group" aria-labelledby="demoHeading">
@@ -126,28 +137,13 @@
   </section>
 
   <section class="midi-strip soundfont-strip" aria-labelledby="bankHeading">
-    <div class="midi-info"><h2 id="bankHeading">INSTRUMENT BANK</h2><p id="bankStatus" role="status" aria-live="polite">Built-in sounds. Open an SF2 or SF3 bank for sampled instruments.</p></div>
+    <div class="midi-info"><h2 id="bankHeading">SOUND LIBRARY</h2><p id="bankStatus" role="status" aria-live="polite">20 built-in voices. Add a local SoundFont to expand the voice menu.</p></div>
     <div class="midi-controls">
       <input id="bankFile" type="file" accept=".sf2,.sf3" hidden>
       <button id="openBank" type="button">OPEN SOUNDFONT</button>
-      <button id="closeBank" type="button" disabled>BUILT-IN SOUNDS</button>
-      <label class="bank-preset">VOICE <select id="bankPreset" aria-label="SoundFont voice" disabled><option>Built-in sounds</option></select></label>
+      <button id="closeBank" type="button" disabled>REMOVE SOUNDFONT</button>
     </div>
-    <p class="midi-note">A loaded bank supplies the keyboard and imported MIDI songs. Built-in demonstration and rhythm sounds stay unchanged. Banks stay in this browser tab.</p>
-  </section>
-  <section class="midi-strip soundfont-strip" aria-labelledby="fmHeading">
-    <div class="midi-info"><h2 id="fmHeading">FM SYNTHESIS</h2><p id="fmStatus" role="status" aria-live="polite">Eight original digital voices. Switch on FM to play.</p></div>
-    <div class="midi-controls">
-      <button id="fmToggle" type="button" aria-pressed="false">FM SYNTH</button>
-      <label class="bank-preset">VOICE <select id="fmPreset" aria-label="FM voice" disabled></select></label>
-    </div>
-    <div class="fm-shaping">
-      <label>BRIGHTNESS <output id="fmBrightnessValue">100%</output><input id="fmBrightness" type="range" min="0" max="200" value="100" disabled></label>
-      <label>ATTACK <output id="fmAttackValue">100%</output><input id="fmAttack" type="range" min="25" max="400" value="100" disabled></label>
-      <label>RELEASE <output id="fmReleaseValue">100%</output><input id="fmRelease" type="range" min="25" max="400" value="100" disabled></label>
-      <button id="fmReset" type="button" disabled>RESET SOUND</button>
-    </div>
-    <p class="midi-note">FM changes the sound of the keys and FM recordings. MIDI songs, demos and rhythms use the existing engines. MIDI export stores the closest standard instrument number, not the exact FM sound.</p>
+    <p class="midi-note">Classic, FM and loaded SoundFont voices share the keyboard's VOICE menu. MIDI songs use the loaded SoundFont, if present, independently of your playing voice.</p>
   </section>
   <div class="under-keyboard">
     <p class="play-hint"><strong>Just play.</strong> Use the keys above, or your computer keyboard: <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> <kbd>D</kbd> <kbd>C</kbd> … then <kbd>Q</kbd> <kbd>2</kbd> <kbd>W</kbd> <kbd>3</kbd> <kbd>E</kbd> …</p>
@@ -156,7 +152,7 @@
       <span>SWIPE THE KEYS TO SCROLL</span>
       <button id="keyRight" type="button">HIGHER KEYS ▶</button>
     </div>
-    <p class="small-print">Select a tone and play, or press DEMO for one of five original songs. AUTO CHORD uses the lowest octave. Recording is temporary until you close or reload the page.</p>
+    <p class="small-print">Choose a voice and play, or press DEMO for one of five original songs. AUTO CHORD uses the lowest octave. Recording is temporary until you close or reload the page.</p>
   </div>
   <footer>Electronic Keyboard · Model EK-1 · An original browser instrument inspired by classic home keyboards. Not affiliated with Casio or Yamaha.</footer>
 </main>
