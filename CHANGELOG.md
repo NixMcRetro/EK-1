@@ -2,7 +2,16 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
-## [0.5.0] - Unreleased
+## [0.6.0] - Unreleased
+
+### Changed
+- One grouped VOICE selector for Classic, FM and loaded SoundFont instruments.
+- FM shaping controls integrated into the faceplate and visible only when needed.
+- SoundFonts remain loaded when the player chooses another engine; MIDI playback continues to use the bank.
+- Recordings retain their engine and bank metadata, with an explicit approximation warning if a sampled recording's original bank is unavailable.
+- Updated browser regression coverage and downloadable previews.
+
+## [0.5.0] - Verified development baseline
 
 ### Added
 - Native six-operator FM engine with eight original voices and independent envelopes.
