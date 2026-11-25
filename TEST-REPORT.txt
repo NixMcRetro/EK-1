@@ -19,3 +19,5 @@ LICENCE: original EK-1 application GPL-3.0-or-later; no deployment made.
 0.9.3: see current CI for output ceiling and Song Builder navigation tests. Digital peak limits do not measure headphone sound pressure levels.
 
 0.9.4 candidate: see current CI for edit history, section duplication, favourites and effect-rendering checks.
+
+0.9.5 candidate: new tests cover note rails, collapsed panels, octave mapping and simultaneous MIDI channel highlights.

@@ -2,6 +2,13 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.5] - Keyboard labels and play-along usability
+
+- Start with all expandable panels collapsed; printed labels for all 49 keys.
+- Comma/period and octave buttons shift computer keyboard shortcuts without transposing MIDI or on-screen keys.
+- MIDI channel colours, split highlights for overlapping channels, and channel legend.
+- Replace middle-dot separators with hyphens.
+
 ## [0.9.4] - Compact instrument polish
 
 - Bounded undo/redo history and compact song structure navigation, with section duplication.

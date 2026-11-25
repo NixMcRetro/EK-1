@@ -452,3 +452,21 @@ footer {
 .sound-options-row label input{accent-color:#536853}
 .sound-options-row label select{max-width:260px}
 .sound-options button[aria-pressed=true]{background:#536853;color:#fff}
+
+/* Note names are printed on the scrolling plastic rails, not on the keys. */
+.key-label-rail{position:relative;width:100%;min-width:1305px;height:18px;background:#303834;color:#d4ddd2;user-select:none;box-sizing:border-box;border-inline:1px solid #121714}
+.rail-note{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:10px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.key .note{display:none!important}
+.key.channel-lit{background:var(--channel-fill);color:#19211e;border-bottom-color:#52665b}
+.key.black.channel-lit{background:var(--channel-fill);color:#17211b;border-bottom-color:#304138}
+.key.channel-lit.pressed{box-shadow:inset 0 0 0 3px #f7f8ee}
+.octave-controls{display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:.07em}
+.keyboard-lip{align-items:center}
+.octave-controls button{font:inherit;color:#e5eae1;background:#454e48;border:1px solid #657169;border-radius:3px;padding:4px 8px;min-height:26px;box-shadow:none}
+.octave-controls button:disabled{opacity:.4}
+.midi-legend{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:#374437}
+.midi-legend[hidden]{display:none}
+.midi-legend span{display:inline-flex;align-items:center;gap:5px}
+.channel-swatch{width:12px;height:12px;border:1px solid #526057;border-radius:2px;display:inline-block}
+@media(min-width:1200px){.key-label-rail{min-width:0}}
+@media(max-width:760px){.octave-controls button{min-height:36px}.keyboard-lip{gap:5px;flex-wrap:wrap}.keyboard-lip>span:last-child{display:none}}

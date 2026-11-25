@@ -21,6 +21,8 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(pathToFileURL(resolve('index.html')).href);
   await page.waitForFunction(()=>!!window.EK1Composer&&!!window.EK1AudioExport);
+  await page.locator('.song-builder > summary').click();
+  await page.locator('.compose-editor > summary').click();
   await page.locator('#composeStyle').selectOption('Ska');
   await page.locator('#composeBars').selectOption('4');
   await page.locator('#composeGenerate').click();

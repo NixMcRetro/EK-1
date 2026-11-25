@@ -36,7 +36,7 @@
    const overview=$('composeSections');overview.replaceChildren();
    list.forEach((section,i)=>{
      const button=document.createElement('button');button.type='button';button.className='section-chip';
-     button.textContent=section.label+' · '+(section.end-section.start)+' bars';
+     button.textContent=section.label+' - '+(section.end-section.start)+' bars';
      button.setAttribute('aria-pressed',String(i===selectedSection));
      button.setAttribute('aria-label',section.label+', bars '+(section.start+1)+' to '+section.end);
      button.addEventListener('click',()=>{

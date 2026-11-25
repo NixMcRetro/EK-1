@@ -1,12 +1,14 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v0.9.4. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.9.5. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.9.4';
+  const VERSION = '0.9.5';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const CHANNEL_COLORS=['#e6af42','#6db4e4','#e68275','#9dc66e','#b6a0e3','#65c4b8','#e7a1c2','#c6bd76','#e69a51','#a3a9b1','#79a5ee','#dba5ec','#83c997','#dc8caa','#91b9ba','#d1a979'];
+  let keyboardOctave=0;
   const SHORTCUTS = ['z','s','x','d','c','v','g','b','h','n','j','m','q','2','w','3','e','r','5','t','6','y','7','u'];
   const TONES = [
     { name: 'Grand Piano', wave: 'triangle', harmonics: [1, .22, .08], attack: .006, release: .25, cutoff: 4200 },
@@ -313,28 +315,52 @@
     }
     return root;
   }
-  function lamp(midi, at, duration) {
-    const node = keyElements.get(midi);
-    if (!node) return;
-    const ms = Math.max(0, Math.round((at - ctx.currentTime) * 1000));
-    const on = setTimeout(() => {
-      timers.delete(on);
-      if (!node.isConnected) return;
-      lights.set(midi, (lights.get(midi) || 0) + 1);
-      node.classList.add('lit');
-      const off = setTimeout(() => {
-        timers.delete(off);
-        const remain = (lights.get(midi) || 1) - 1;
-        if (remain > 0) lights.set(midi, remain);
-        else { lights.delete(midi); node.classList.remove('lit'); }
-      }, Math.max(80, duration * 1000));
-      timers.add(off);
-    }, ms);
-    timers.add(on);
+  function paintLamp(midi){
+    const node=keyElements.get(midi),active=lights.get(midi);
+    if(!node)return;
+    const channels=active?[...active.keys()].filter(c=>c>=0).sort((a,b)=>a-b):[];
+    node.classList.toggle('lit',!!active?.size);
+    node.classList.toggle('channel-lit',channels.length>0);
+    if(channels.length){
+      const stops=channels.flatMap((c,i)=>[CHANNEL_COLORS[c]+' '+(i*100/channels.length)+'%',CHANNEL_COLORS[c]+' '+((i+1)*100/channels.length)+'%']);
+      node.style.setProperty('--channel-fill','linear-gradient(90deg,'+stops.join(',')+')');
+      node.dataset.channels=channels.map(c=>c+1).join(',');
+    }else{node.style.removeProperty('--channel-fill');delete node.dataset.channels;}
   }
-  function clearLamps() {
-    timers.forEach(clearTimeout); timers.clear(); lights.clear();
-    keyElements.forEach(node => node.classList.remove('lit'));
+  function lamp(midi,at,duration,channel=-1){
+    const node=keyElements.get(midi);if(!node||channel===9)return;
+    const ms=Math.max(0,Math.round((at-ctx.currentTime)*1000));
+    const on=setTimeout(()=>{
+      timers.delete(on);if(!node.isConnected)return;
+      let active=lights.get(midi);if(!active){active=new Map();lights.set(midi,active);}
+      active.set(channel,(active.get(channel)||0)+1);paintLamp(midi);
+      const off=setTimeout(()=>{
+        timers.delete(off);const current=lights.get(midi);if(!current)return;
+        const remain=(current.get(channel)||1)-1;
+        if(remain>0)current.set(channel,remain);else current.delete(channel);
+        if(!current.size)lights.delete(midi);paintLamp(midi);
+      },Math.max(30,duration*1000));
+      timers.add(off);
+    },ms);timers.add(on);
+  }
+  function clearLamps(){
+    timers.forEach(clearTimeout);timers.clear();lights.clear();
+    keyElements.forEach((node,midi)=>paintLamp(midi));
+  }
+  function renderMidiLegend(song){
+    const legend=$('midiLegend');legend.replaceChildren();legend.hidden=!song;
+    if(!song)return;
+    const channels=new Map();
+    for(const note of song.notes){
+      if(!channels.has(note.channel))channels.set(note.channel,new Set());
+      channels.get(note.channel).add(note.program+1);
+    }
+    for(const [channel,programs] of [...channels].sort((a,b)=>a[0]-b[0])){
+      const item=document.createElement('span'),swatch=document.createElement('i');
+      swatch.className='channel-swatch';swatch.style.background=CHANNEL_COLORS[channel];swatch.setAttribute('aria-hidden','true');
+      const desc=channel===9?'CH 10 - Drums (not lit)':'CH '+(channel+1)+' - '+(programs.size===1?'GM '+[...programs][0]:'multiple patches');
+      item.append(swatch,desc);legend.append(item);
+    }
   }
   function stopTransport(announce = true) {
     transportGeneration++;
@@ -514,7 +540,7 @@
       const parsed=EK1MIDI.parse(await file.arrayBuffer());
       if(id!==importRequest||recording)return;
       if(transport?.type==='midi')stopTransport(false);
-      importedMidi=parsed; midiName=file.name;
+      importedMidi=parsed; midiName=file.name;renderMidiLegend(parsed);
       const seconds=Math.round(parsed.duration), length=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
       midiMessage(midiName+' | '+parsed.notes.length+' notes | '+parsed.channels.length+' parts | '+length);
       show('MIDI READY', 'PRESS PLAY MIDI');
@@ -556,7 +582,7 @@
         const end=tr.start+n.time+n.duration;
         if(end<=now||(tr.type==='demo'&&melodyOff&&n.channel===0))continue;
         tr.sampleBank.songOn(n);
-        if(tr.type!=='demo'||n.channel===0)lamp(n.key,now,end-now);
+        if(tr.type!=='demo'||n.channel===0)lamp(n.key,now,end-now,tr.type==='midi'?n.channel:-1);
       }
       if(tr.type==='demo'){
         const bar=Math.min(16,1+Math.floor(Math.max(0,now-tr.start)/(240/SONGS[tr.demoIndex].tempo)));
@@ -585,7 +611,7 @@
         if(at>=now-.12)drum(EK1MIDI.drumFor(n.key),begin,n.velocity/127*.55,channel);
       }else if(tr.active.length<64){
         const sound=voice(n.key,begin,Math.max(.01,end-begin),EK1MIDI.toneFor(n.program),n.velocity/127*.23,channel);
-        tr.active.push({sound,end:end+.7});lamp(n.key,begin,Math.max(.01,end-begin));
+        tr.active.push({sound,end:end+.7});lamp(n.key,begin,Math.max(.01,end-begin),n.channel);
       }
     }
     if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');}
@@ -691,6 +717,7 @@
   }
   function buildKeys() {
     const bed = $('keys');
+    const upper=$('sharpLabels'),lower=$('naturalLabels');
     let white = 0;
     const whiteCount = Array.from({length:LAST - FIRST + 1}, (_,i) => FIRST + i).filter(n => !SHARPS.has(n % 12)).length;
     for (let midi = FIRST; midi <= LAST; midi++) {
@@ -707,6 +734,7 @@
         element.style.width = (100 / whiteCount) + '%';
         white++;
       }
+      const rail=document.createElement('span');rail.className='rail-note';rail.textContent=label(midi);rail.style.left=(black?position:position+50/whiteCount)+'%';rail.dataset.note=midi;(black?upper:lower).append(rail);
       const shortcutIndex = midi - 60;
       const shortcut = SHORTCUTS[shortcutIndex];
       element.innerHTML = '<span class="note"></span><span class="shortcut"></span>';
@@ -757,12 +785,29 @@
       updateButtons();
     });
   }
+  function updateKeyboardMapping(){
+    for(const [midi,key] of keyElements){
+      const shortcut=SHORTCUTS[midi-60-keyboardOctave*12];
+      key.querySelector('.shortcut').textContent=shortcut?shortcut.toUpperCase():'';
+      key.setAttribute('aria-label','Play '+label(midi)+(shortcut?', keyboard '+shortcut:''));
+    }
+    $('octaveValue').textContent=keyboardOctave===0?'0':(keyboardOctave>0?'+':'')+keyboardOctave;
+    $('octaveDown').disabled=keyboardOctave<=-1;$('octaveUp').disabled=keyboardOctave>=1;
+  }
+  function shiftKeyboardOctave(delta){
+    const next=Math.max(-1,Math.min(1,keyboardOctave+delta));if(next===keyboardOctave)return;
+    for(const token of [...held.keys(),...pending])if(token.startsWith('hardware-'))release(token);
+    keyboardOctave=next;updateKeyboardMapping();
+  }
   function setupKeyboardShortcuts() {
-    const shortcutMap = new Map(SHORTCUTS.map((key, i) => [key, 60 + i]));
+    $('octaveDown').addEventListener('click',()=>shiftKeyboardOctave(-1));
+    $('octaveUp').addEventListener('click',()=>shiftKeyboardOctave(1));
+    updateKeyboardMapping();
     document.addEventListener('keydown', event => {
       if (event.repeat || event.ctrlKey || event.altKey || event.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName) || event.target.isContentEditable) return;
-      const midi = shortcutMap.get(event.key.toLowerCase());
-      if (midi === undefined) return;
+      if(event.key===','||event.key==='.'){event.preventDefault();shiftKeyboardOctave(event.key===','?-1:1);return;}
+      const index=SHORTCUTS.indexOf(event.key.toLowerCase());if(index<0)return;
+      const midi=60+index+keyboardOctave*12;
       event.preventDefault();
       press(midi, 'hardware-' + event.code);
     });
@@ -877,7 +922,7 @@
     tones: TONES.length,
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
-    get state() { return { transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    get state() { return { keyboardOctave, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoArrangement,
     outputPeak(){if(!outputMeter)return 0;const samples=new Float32Array(outputMeter.fftSize);outputMeter.getFloatTimeDomainData(samples);return samples.reduce((peak,n)=>Math.max(peak,Math.abs(n)),0);},

@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#343837">
   <meta name="description" content="Electronic Keyboard (Model EK-1). A playable 49-key home keyboard with twenty built-in voices, six rhythms and five original demo songs.">
-  <title>Electronic Keyboard (Model EK-1) v0.9.4</title>
+  <title>Electronic Keyboard (Model EK-1) v0.9.5</title>
   <link rel="stylesheet" href="./style.css">
   <script src="./midi.js" defer></script>
   <script src="./vendor/spessasynth-local.js" defer></script>
@@ -31,8 +31,8 @@
       </div>
       <div class="model-meta">
         <span class="model-number">MODEL EK-1</span>
-        <span class="product-spec">49 KEYS · DIGITAL SOUND</span>
-        <span class="version">v0.9.4</span>
+        <span class="product-spec">49 KEYS - DIGITAL SOUND</span>
+        <span class="version">v0.9.5</span>
       </div>
     </header>
 
@@ -125,13 +125,15 @@
       <span class="front-caption front-right">MELODY KEYBOARD</span>
     </div>
     <div class="keyboard-scroll" tabindex="0" aria-label="Scroll sideways to reach all 49 piano keys">
+      <div class="key-label-rail" id="sharpLabels" aria-hidden="true"></div>
       <div class="keys" id="keys" role="group" aria-label="Playable piano keyboard from C3 to C7"></div>
+      <div class="key-label-rail" id="naturalLabels" aria-hidden="true"></div>
     </div>
-    <div class="keyboard-lip" aria-hidden="true"><span>EK-1 · 49 KEY</span><span>POLYPHONIC</span></div>
+    <div class="keyboard-lip"><span>EK-1 - 49 KEY</span><div class="octave-controls" aria-label="Computer keyboard octave"><button id="octaveDown" type="button" title="Lower computer keyboard octave (comma)" aria-label="Lower computer keyboard octave">◀ ,</button><span>OCTAVE <output id="octaveValue" aria-live="polite">0</output></span><button id="octaveUp" type="button" title="Raise computer keyboard octave (period)" aria-label="Raise computer keyboard octave">. ▶</button></div><span>POLYPHONIC</span></div>
     <div class="mobile-key-nav" aria-label="Move along the on-screen keyboard"><button id="keyLeft" type="button">◀ LOWER KEYS</button><span>SWIPE KEYS TO SCROLL</span><button id="keyRight" type="button">HIGHER KEYS ▶</button></div>
   </section>
 
-  <details class="song-builder" open>
+  <details class="song-builder">
     <summary>SONG BUILDER <span>Make your own music</span></summary>
     <p class="compose-intro">Choose a style, generate an arrangement, and edit any chord or melody note. Play it back or save a MIDI file.</p>
     <div class="compose-settings">
@@ -146,7 +148,7 @@
     <p class="compose-hint">Key, chord pattern and length are applied by NEW ARRANGEMENT, which replaces the current notes. Style, tempo and feel apply at playback. Natural adds subtle groove; Expressive adds stronger variation; Original retains the earlier arrangement engine.</p>
     <div id="composeTracks" class="compose-tracks" aria-label="Song parts"></div>
     <div class="compose-overview"><div class="compose-overview-heading"><span>SONG STRUCTURE <output id="composeLengthReadout"></output></span><div><button id="composeUndo" type="button" disabled>UNDO</button> <button id="composeRedo" type="button" disabled>REDO</button></div></div><div id="composeSections" aria-label="Song sections"></div></div>
-    <details class="compose-editor" open><summary>Edit chords and melody</summary>
+    <details class="compose-editor"><summary>Edit chords and melody</summary>
     <div class="compose-table-wrap"><table class="compose-table"><thead><tr><th>BAR</th><th>CHORD</th><th>BEAT 1</th><th>BEAT 2</th><th>BEAT 3</th><th>BEAT 4</th></tr></thead><tbody id="composeRows"></tbody></table></div></details>
     <div class="compose-actions"><button id="composePlay" type="button">PLAY SONG</button><button id="composeMelody" type="button" title="Keep the chord progression and replace the melody">NEW MELODY</button><button id="composeHarmony" type="button">NEW CHORDS + MELODY</button><button id="composeSave" type="button">EXPORT SONG MIDI</button></div>
     <label class="compose-scroll"><input type="checkbox" id="composeReturn" checked> Return to keyboard on playback</label>
@@ -170,7 +172,8 @@
       <button id="saveMidi" type="button" disabled>SAVE MIDI COPY</button>
       <button id="exportTake" type="button" disabled>EXPORT RECORDING</button>
     </div>
-    <p class="midi-note">MIDI stores notes, not audio. Imported songs use built-in approximations or the selected SoundFont bank.</p>
+    <div id="midiLegend" class="midi-legend" aria-label="MIDI channel colours" hidden></div>
+    <p class="midi-note">MIDI colours identify channels; a split key means multiple channels share that pitch. Percussion and notes outside C3-C7 are not highlighted. MIDI stores notes, not audio. Imported songs use built-in approximations or the selected SoundFont bank.</p>
   </section>
 
   <section class="midi-strip soundfont-strip" aria-labelledby="bankHeading">
@@ -190,10 +193,10 @@
     <p class="midi-note">Classic, FM and loaded SoundFont voices share the keyboard's VOICE menu. MIDI songs and all five demos use the loaded SoundFont, if present, independently of your playing voice. MELODY OFF mutes the demo lead for play-along. STOP also silences held SoundFont notes.</p>
   </section>
   <div class="under-keyboard">
-    <p class="play-hint"><strong>Just play.</strong> Use the keys above, or your computer keyboard: <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> <kbd>D</kbd> <kbd>C</kbd> … then <kbd>Q</kbd> <kbd>2</kbd> <kbd>W</kbd> <kbd>3</kbd> <kbd>E</kbd> …</p>
+    <p class="play-hint"><strong>Just play.</strong> Use the keys above, or your computer keyboard: <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> <kbd>D</kbd> <kbd>C</kbd> … then <kbd>Q</kbd> <kbd>2</kbd> <kbd>W</kbd> <kbd>3</kbd> <kbd>E</kbd> … Use <kbd>,</kbd> and <kbd>.</kbd> to shift the computer keyboard by an octave.</p>
     <p class="small-print">Choose a voice and play, or press DEMO for one of five original songs. AUTO CHORD uses the lowest octave. Recording is temporary until you close or reload the page.</p>
   </div>
-  <footer>Electronic Keyboard · Model EK-1 · An original browser instrument inspired by classic home keyboards. Not affiliated with Casio or Yamaha. · MP3 encoding: <a href="https://lame.sourceforge.io/">LAME</a> / <a href="https://github.com/zhuker/lamejs">lamejs 1.2.1</a> (LGPL). <a href="THIRD-PARTY-NOTICES.txt">Licences and credits</a>. Encoder source is included in the offline ZIP. <span>Original EK-1 code &copy; 2026 NixMcRetro and contributors. You may redistribute it under <a href="LICENSE">GPL-3.0-or-later</a>; provided without warranty. <a href="https://github.com/NixMcRetro/EK-1">Source code</a>.</span></footer>
+  <footer>Electronic Keyboard - Model EK-1 - An original browser instrument inspired by classic home keyboards. Not affiliated with Casio or Yamaha. - MP3 encoding: <a href="https://lame.sourceforge.io/">LAME</a> / <a href="https://github.com/zhuker/lamejs">lamejs 1.2.1</a> (LGPL). <a href="THIRD-PARTY-NOTICES.txt">Licences and credits</a>. Encoder source is included in the offline ZIP. <span>Original EK-1 code &copy; 2026 NixMcRetro and contributors. You may redistribute it under <a href="LICENSE">GPL-3.0-or-later</a>; provided without warranty. <a href="https://github.com/NixMcRetro/EK-1">Source code</a>.</span></footer>
 </main>
 </body>
 </html>
