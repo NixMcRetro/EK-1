@@ -32,7 +32,8 @@ try{
  await page.locator('#tone').selectOption('fm-2');
  assert.equal(await page.evaluate(()=>EK1.state.engine),'fm');
  assert(await page.evaluate(()=>EK1.state.soundfont),'Bank must stay loaded in FM mode');
- // All five demos must use the sample engine independently of the live FM voice.
+ // Original demo mode retains the authored sampled lead while FM is selected.
+ await page.locator('#demoFollow').uncheck();
  for(let i=0;i<5;i++){
    const score=await page.evaluate(i=>EK1.demoArrangement(i),i);
    assert.deepEqual(score.channels,[0,1,2,9]);

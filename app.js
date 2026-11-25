@@ -1,15 +1,16 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Electronic Keyboard (Model EK-1) v0.9.5. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.9.6. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.9.5';
+  const VERSION = '0.9.6';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   const CHANNEL_COLORS=['#e6af42','#6db4e4','#e68275','#9dc66e','#b6a0e3','#65c4b8','#e7a1c2','#c6bd76','#e69a51','#a3a9b1','#79a5ee','#dba5ec','#83c997','#dc8caa','#91b9ba','#d1a979'];
   let keyboardOctave=0;
-  const SHORTCUTS = ['z','s','x','d','c','v','g','b','h','n','j','m','q','2','w','3','e','r','5','t','6','y','7','u'];
+  const SHORTCUT_BASE=53;
+  const SHORTCUTS=['z','s','x','d','c','f','v','b','h','n','j','m','q','2','w','3','e','4','r','t','6','y','7','u'];
   const TONES = [
     { name: 'Grand Piano', wave: 'triangle', harmonics: [1, .22, .08], attack: .006, release: .25, cutoff: 4200 },
     { name: 'Electric Piano', wave: 'sine', harmonics: [1, .45, .12], attack: .006, release: .33, cutoff: 5900 },
@@ -108,6 +109,7 @@
     }
   ];
   let ctx, master, outputStage, outputMeter, noise, transport = null, loop = null, endTimer = null, transportGeneration = 0;
+  let paused=false,pauseBusy=false,pauseDisplay=null,followDemoVoice=true;
   let tone = 0, rhythm = 0, tempo = 116, volume = EK1Levels.DEFAULT_VOLUME, melodyOff = false, autoChord = false;
   let heldChord = null, recording = false, take = [], takeStart = 0, recordTimer = null;
   let importedMidi = null, midiName = '', importRequest = 0;
@@ -189,11 +191,11 @@
       const data = noise.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
     }
-    if (ctx.state !== 'running') {
+    if (!paused && ctx.state !== 'running') {
       // Firefox can leave resume() pending under autoplay rules. Do not deadlock UI.
       ctx.resume().catch(() => show('AUDIO BLOCKED', 'ALLOW SOUND IN YOUR BROWSER'));
       setTimeout(() => {
-        if (ctx && ctx.state !== 'running') show('AUDIO BLOCKED', 'CLICK A KEY OR ALLOW SOUND');
+        if (ctx && !paused && ctx.state !== 'running') show('AUDIO BLOCKED', 'CLICK A KEY OR ALLOW SOUND');
       }, 900);
     }
     return true;
@@ -205,7 +207,9 @@
   function reflectButtons() {
     $('playDemo').textContent = transport?.type === 'demo' ? 'DEMO ■' : 'DEMO';
     $('playDemo').disabled = bankLoading || recording;
-    $('demoSound').textContent = bank ? 'Demo playback: SoundFont' : 'Demo playback: Classic';
+    $('pause').disabled=!transport||recording||bankLoading||pauseBusy;
+    $('pause').textContent=paused?'RESUME ▶':'PAUSE Ⅱ';$('pause').setAttribute('aria-pressed',String(paused));
+    $('demoSound').textContent='Demo backing: '+(bank?'SoundFont':'Classic')+' - Lead: '+(followDemoVoice?voiceLabel():'Original');
     $('startRhythm').textContent = transport?.type === 'rhythm' ? 'PLAYING' : 'START';
     $('record').textContent = recording ? '■ STOP REC' : '● REC';
     $('record').setAttribute('aria-pressed', String(recording));
@@ -315,6 +319,25 @@
     }
     return root;
   }
+  function clockTimer(at,fn,register=false){
+    const id=setInterval(()=>{if(paused||!ctx||ctx.currentTime<at)return;clearInterval(id);if(register)timers.delete(id);fn();},12);
+    if(register)timers.add(id);return id;
+  }
+  async function togglePause(){
+    if(!transport||recording||bankLoading||pauseBusy||!ctx)return;
+    const current=transport;pauseBusy=true;
+    try{
+      if(!paused){
+        stopHeld();bank?.stopLive();pauseDisplay=[$('displayMain').textContent,$('displaySub').textContent];
+        paused=true;reflectButtons();await ctx.suspend();
+        if(transport===current&&paused)show('PAUSED','PRESS RESUME TO CONTINUE');
+      }else{
+        await ctx.resume();
+        if(transport===current){paused=false;if(pauseDisplay)show(...pauseDisplay);pauseDisplay=null;}
+      }
+    }catch(e){paused=ctx.state==='suspended';show('AUDIO PAUSE UNAVAILABLE','PRESS STOP OR RESUME');}
+    finally{pauseBusy=false;reflectButtons();}
+  }
   function paintLamp(midi){
     const node=keyElements.get(midi),active=lights.get(midi);
     if(!node)return;
@@ -329,22 +352,20 @@
   }
   function lamp(midi,at,duration,channel=-1){
     const node=keyElements.get(midi);if(!node||channel===9)return;
-    const ms=Math.max(0,Math.round((at-ctx.currentTime)*1000));
-    const on=setTimeout(()=>{
+    const on=clockTimer(at,()=>{
       timers.delete(on);if(!node.isConnected)return;
       let active=lights.get(midi);if(!active){active=new Map();lights.set(midi,active);}
       active.set(channel,(active.get(channel)||0)+1);paintLamp(midi);
-      const off=setTimeout(()=>{
+      const off=clockTimer(at+Math.max(.03,duration),()=>{
         timers.delete(off);const current=lights.get(midi);if(!current)return;
         const remain=(current.get(channel)||1)-1;
         if(remain>0)current.set(channel,remain);else current.delete(channel);
         if(!current.size)lights.delete(midi);paintLamp(midi);
-      },Math.max(30,duration*1000));
-      timers.add(off);
-    },ms);timers.add(on);
+      },true);
+    },true);
   }
   function clearLamps(){
-    timers.forEach(clearTimeout);timers.clear();lights.clear();
+    timers.forEach(clearInterval);timers.clear();lights.clear();
     keyElements.forEach((node,midi)=>paintLamp(midi));
   }
   function renderMidiLegend(song){
@@ -364,8 +385,9 @@
   }
   function stopTransport(announce = true) {
     transportGeneration++;
+    const wasPaused=paused;paused=false;pauseDisplay=null;
     if (loop) { clearInterval(loop); loop = null; }
-    if (endTimer) { clearTimeout(endTimer); endTimer = null; }
+    if (endTimer) { clearInterval(endTimer); endTimer = null; }
     clearLamps();
     if ((transport?.type === 'midi' || transport?.sampleBank) && ctx) {
       if (transport.sampleBank) transport.sampleBank.stopSong();
@@ -374,13 +396,18 @@
     if (transport?.bus && ctx) {
       const b = transport.bus, now = ctx.currentTime;
       b.gain.cancelScheduledValues(now);
-      b.gain.setTargetAtTime(.00001, now, .02);
+      if(wasPaused)b.gain.setValueAtTime(0,now);else b.gain.setTargetAtTime(.00001, now, .02);
       const channels=transport.channelBuses||[];
       setTimeout(() => { try { channels.forEach(c=>{c.gain.disconnect();c.pan?.disconnect();}); b.disconnect(); } catch (_) {} }, 2500);
     }
     transport = null;
+    if(wasPaused&&ctx)ctx.resume().catch(()=>{});
     reflectButtons();
     if (announce) show('EK-1 READY', voiceLabel());
+  }
+  function demoLeadSound(midi,at,duration,tr,originalTone,velocity=.43){
+    if(followDemoVoice&&engine==='fm')return EK1FM.voice(ctx,tr.bus,midi,at,duration,fmIndex,fmSettings,velocity*EK1Levels.FM_GAIN);
+    return voice(midi,at,duration,followDemoVoice&&engine==='classic'?tone:originalTone,velocity,tr.bus);
   }
   function scheduleStep() {
     if (!transport) return;
@@ -389,7 +416,7 @@
       const song = SONGS[tr.song];
       if (step >= song.bars * STEPS_PER_BAR) {
         if (loop) { clearInterval(loop); loop = null; }
-        if (!endTimer) endTimer = setTimeout(() => { stopTransport(); show('DEMO FINISHED', song.title.toUpperCase()); }, Math.max(100, (at - ctx.currentTime + .65) * 1000));
+        if (!endTimer) endTimer = clockTimer(at+.65,() => { stopTransport(); show('DEMO FINISHED', song.title.toUpperCase()); });
         return false;
       }
       drumsForStep(step, at, song.rhythm, tr.bus);
@@ -404,7 +431,7 @@
         const play = song.events.filter(n => n.step === step);
         for (const n of play) {
           const demoTone = song.sections ? song.sections[Math.floor(step / 64) % song.sections.length] : song.lead;
-          voice(n.midi, at, n.length * beat * .91, demoTone, .43, tr.bus);
+          demoLeadSound(n.midi,at,n.length*beat*.91,tr,demoTone);
           lamp(n.midi, at, n.length * beat);
         }
       }
@@ -423,7 +450,7 @@
     return true;
   }
   function tick() {
-    if (!transport || !ctx) return;
+    if (!transport || !ctx || paused) return;
     let count = 0;
     while (transport && transport.nextTime < ctx.currentTime + .135 && count++ < 20) {
       if (!scheduleStep()) break;
@@ -437,7 +464,7 @@
     const song=SONGS[index];
     if(bank){
       transport=makeMidiTransport('demo',demoArrangement(index),bank,createBus());
-      transport.demoIndex=index;transport.demoBar=1;
+      transport.demoIndex=index;transport.demoBar=1;transport.localLead=[];
       loop=setInterval(midiTick,25);reflectButtons();demoDisplay(transport,1);midiTick();
     }else{
       transport={type:'demo',song:index,step:0,nextTime:ctx.currentTime+.08,bpm:song.tempo,bus:createBus()};
@@ -459,11 +486,11 @@
     keyElements.forEach(node => node.classList.remove('pressed'));
   }
   async function press(midi, token) {
-    if (held.has(token) || pending.has(token)) return;
+    if (paused || held.has(token) || pending.has(token)) return;
     pending.add(token);
     const ready = await audio();
     pending.delete(token);
-    if (!ready || cancelled.has(token)) { cancelled.delete(token); return; }
+    if (!ready || paused || cancelled.has(token)) { cancelled.delete(token); return; }
     if (held.has(token)) return;
     if (autoChord && midi < 60 && transport?.type !== 'demo' && transport?.type !== 'midi') {
       heldChord = label(midi + 12) + ($('chordType').value === 'minor' ? 'm' : '');
@@ -517,8 +544,8 @@
       transport=makeMidiTransport('take',EK1MIDI.parse(EK1MIDI.encodeTake(take)),bank,bus);
       loop=setInterval(midiTick,25);reflectButtons();show('PLAYING RECORDING',take.length+' NOTES');midiTick();return;
     }
-    transport = { type: 'take', bus };
     const start = ctx.currentTime + .09;
+    transport = { type: 'take', bus, start };
     for (const n of take) {
       const at = start + n.t;
       if(n.fm)EK1FM.voice(ctx,bus,n.midi,at,n.length||.12,n.fm.index,n.fm.settings,.38*EK1Levels.FM_GAIN);
@@ -526,7 +553,7 @@
       lamp(n.midi, at, n.length || .12);
     }
     const end = Math.max(...take.map(n => n.t + (n.length || .12)));
-    endTimer = setTimeout(() => { stopTransport(); show('PLAYBACK FINISHED', take.length + ' RECORDED NOTES'); }, (end + .8) * 1000);
+    endTimer = clockTimer(start+end+.8,() => { stopTransport(); show('PLAYBACK FINISHED', take.length + ' RECORDED NOTES'); });
     reflectButtons();
     show('PLAYING RECORDING', take.some(n=>n.bankGeneration!==undefined)?'ORIGINAL BANK UNAVAILABLE':take.length + ' NOTES');
   }
@@ -569,11 +596,12 @@
   }
   function midiTick() {
     const tr=transport;
-    if(!tr||(tr.type!=='midi'&&!tr.sampleBank))return;
+    if(paused||!tr||(tr.type!=='midi'&&!tr.sampleBank))return;
     const now=ctx.currentTime;
     if(tr.sampleBank){
       // Dispatch a single chronological queue. Offs precede ons at a shared
       // tick; no early note-on can overtake a still-pending note-off.
+      if(tr.localLead)tr.localLead=tr.localLead.filter(n=>n.end>now);
       let work=0;
       while(tr.index<tr.events.length && tr.start+tr.events[tr.index].time<=now && work++<2048){
         const e=tr.events[tr.index++],n=e.note;
@@ -581,7 +609,9 @@
         if(e.kind==='off'){tr.sampleBank.songOff(n);continue;}
         const end=tr.start+n.time+n.duration;
         if(end<=now||(tr.type==='demo'&&melodyOff&&n.channel===0))continue;
-        tr.sampleBank.songOn(n);
+        if(tr.type==='demo'&&n.channel===0&&followDemoVoice&&engine!=='soundfont'){
+          const sound=demoLeadSound(n.key,now,end-now,tr,EK1MIDI.toneFor(n.program),.38);tr.localLead.push({sound,end:end+.7});
+        }else tr.sampleBank.songOn(n,tr.type==='demo'&&n.channel===0&&followDemoVoice&&engine==='soundfont'?bank.selected:null);
         if(tr.type!=='demo'||n.channel===0)lamp(n.key,now,end-now,tr.type==='midi'?n.channel:-1);
       }
       if(tr.type==='demo'){
@@ -686,8 +716,9 @@
     }else{
       engine='classic';tone=Number(value);
     }
+    if(transport?.type==='demo'&&followDemoVoice&&transport.sampleBank){transport.sampleBank.stopSongChannel(0);for(const n of transport.localLead||[])n.sound.release(ctx.currentTime);transport.localLead=[];}
     updateFM();
-    show(voiceLabel(),engine==='fm'?'FM VOICE':engine==='soundfont'?'SOUNDFONT VOICE':'READY TO PLAY');
+    if(!paused)show(voiceLabel(),engine==='fm'?'FM VOICE':engine==='soundfont'?'SOUNDFONT VOICE':'READY TO PLAY');
   }
   function bankMessage(message){$('bankStatus').textContent=message;}
   async function loadBank(file){
@@ -735,7 +766,7 @@
         white++;
       }
       const rail=document.createElement('span');rail.className='rail-note';rail.textContent=label(midi);rail.style.left=(black?position:position+50/whiteCount)+'%';rail.dataset.note=midi;(black?upper:lower).append(rail);
-      const shortcutIndex = midi - 60;
+      const shortcutIndex = midi - SHORTCUT_BASE;
       const shortcut = SHORTCUTS[shortcutIndex];
       element.innerHTML = '<span class="note"></span><span class="shortcut"></span>';
       element.querySelector('.note').textContent = label(midi);
@@ -787,7 +818,7 @@
   }
   function updateKeyboardMapping(){
     for(const [midi,key] of keyElements){
-      const shortcut=SHORTCUTS[midi-60-keyboardOctave*12];
+      const shortcut=SHORTCUTS[midi-SHORTCUT_BASE-keyboardOctave*12];
       key.querySelector('.shortcut').textContent=shortcut?shortcut.toUpperCase():'';
       key.setAttribute('aria-label','Play '+label(midi)+(shortcut?', keyboard '+shortcut:''));
     }
@@ -807,7 +838,7 @@
       if (event.repeat || event.ctrlKey || event.altKey || event.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName) || event.target.isContentEditable) return;
       if(event.key===','||event.key==='.'){event.preventDefault();shiftKeyboardOctave(event.key===','?-1:1);return;}
       const index=SHORTCUTS.indexOf(event.key.toLowerCase());if(index<0)return;
-      const midi=60+index+keyboardOctave*12;
+      const midi=SHORTCUT_BASE+index+keyboardOctave*12;if(midi<FIRST||midi>LAST)return;
       event.preventDefault();
       press(midi, 'hardware-' + event.code);
     });
@@ -868,6 +899,8 @@
       if (transport?.type === 'rhythm') stopTransport();
       else beginRhythm();
     });
+    $('pause').addEventListener('click',togglePause);
+    $('demoFollow').addEventListener('change',()=>{followDemoVoice=$('demoFollow').checked;if(transport?.type==='demo'&&transport.sampleBank){transport.sampleBank.stopSongChannel(0);for(const n of transport.localLead||[])n.sound.release(ctx.currentTime);transport.localLead=[];}reflectButtons();});
     $('stop').addEventListener('click', () => {
       if (recording) endRecord();
       stopTransport();
@@ -877,7 +910,7 @@
     $('melodyOff').addEventListener('click', () => {
       melodyOff = !melodyOff; reflectButtons();
       if (transport?.type === 'demo') {
-        if(melodyOff&&transport.sampleBank){transport.sampleBank.stopSongChannel(0);clearLamps();}
+        if(melodyOff&&transport.sampleBank){transport.sampleBank.stopSongChannel(0);for(const n of transport.localLead||[])n.sound.release(ctx.currentTime);transport.localLead=[];clearLamps();}
         demoDisplay(transport,transport.sampleBank?transport.demoBar:Math.min(16,1+Math.floor(transport.step/16)));
       }
     });
@@ -922,7 +955,7 @@
     tones: TONES.length,
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
-    get state() { return { keyboardOctave, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    get state() { return { keyboardOctave, paused, followDemoVoice, audioTime:ctx?.currentTime||0, demoLeadEngine:transport?.type==='demo'?(followDemoVoice?engine:(transport.sampleBank?'soundfont':'classic')):null, transport: transport?.type || 'stopped', recording, composing:!!transport?.composing, takeNotes: take.length, demoIndex: demoIndex(), demoEngine:transport?.type==='demo'?(transport.sampleBank?'soundfont':'classic'):null, demoLeadKeys:transport?.type==='demo'&&transport.sampleBank?transport.sampleBank.songChannelKeys(0):0, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, sampleKeys:bank?.songKeys||0, midiPosition:transport?.type==='midi'?Math.max(0,ctx.currentTime-transport.start):0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoArrangement,
     outputPeak(){if(!outputMeter)return 0;const samples=new Float32Array(outputMeter.fftSize);outputMeter.getFloatTimeDomainData(samples);return samples.reduce((peak,n)=>Math.max(peak,Math.abs(n)),0);},

@@ -2,6 +2,12 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [0.9.6] - Middle C mapping and playback controls
+
+- Two-row F3-E5 computer keyboard mapping, with A3/B3/C4 on C/V/B and octave shifting.
+- Optional demo lead follows the selected voice (default on); original backing stays intact.
+- Shared audio-clock pause/resume for all playback types; light and completion timers follow the audio clock.
+
 ## [0.9.5] - Keyboard labels and play-along usability
 
 - Start with all expandable panels collapsed; printed labels for all 49 keys.

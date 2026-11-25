@@ -473,3 +473,5 @@ footer {
 
 /* Keep narrow rail labels legible at smaller desktop widths. */
 @media(min-width:1200px) and (max-width:1350px){.rail-note{font-size:9px}}
+
+.demo-follow{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:12px}.demo-follow input{accent-color:#536853}#pause[aria-pressed=true]{background:#afc5b0;color:#17291a}

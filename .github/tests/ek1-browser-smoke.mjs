@@ -1,4 +1,4 @@
-// Electronic Keyboard (Model EK-1) v0.9.5 browser regression.
+// Electronic Keyboard (Model EK-1) v0.9.6 browser regression.
 // Run with: node .github/tests/ek1-browser-smoke.mjs
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
@@ -18,7 +18,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(url, {waitUntil:'load'});
       await page.waitForFunction(() => !!window.EK1);
-      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.9\.5/);
+      assert.match(await page.title(),/Electronic Keyboard \(Model EK-1\) v0\.9\.6/);
       const info = await page.evaluate(() => ({
         version: EK1.version,
         tones: EK1.tones,
@@ -27,7 +27,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         bars: Array.from({length:EK1.demos}, (_,i) => EK1.demoBars(i)),
         events: Array.from({length:EK1.demos}, (_,i) => EK1.demoEvents(i))
       }));
-      assert.equal(info.version, '0.9.5');
+      assert.equal(info.version, '0.9.6');
       assert.deepEqual([info.tones,info.rhythms,info.demos], [12,6,5]);
       assert.deepEqual(info.bars, [16,16,16,16,16]);
       for (const [i,events] of info.events.entries()) {
@@ -54,12 +54,13 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       assert(!(await page.locator('body').innerText()).includes('·'));
       await page.locator('.keyboard-scroll').focus();
       await page.keyboard.press(',');assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),-1);
-      assert.equal(await page.locator('[data-midi="48"] .shortcut').innerText(),'Z');
+      assert.equal(await page.locator('[data-midi="48"] .shortcut').innerText(),'B');
       await page.keyboard.press('.');assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),0);
       await page.keyboard.press('.');assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),1);
-      assert.equal(await page.locator('[data-midi="72"] .shortcut').innerText(),'Z');
+      assert.equal(await page.locator('[data-midi="65"] .shortcut').innerText(),'Z');
       await page.keyboard.press('.');assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),1);
       await page.locator('#octaveDown').click();assert.equal(await page.evaluate(()=>EK1.state.keyboardOctave),0);
+      assert.equal(await page.locator('[data-midi="57"] .shortcut').innerText(),'C');assert.equal(await page.locator('[data-midi="59"] .shortcut').innerText(),'V');assert.equal(await page.locator('[data-midi="60"] .shortcut').innerText(),'B');
       assert.equal(await page.locator('#keys .key.white').count(), 29);
       assert.equal(await page.locator('#keys .key.black').count(), 20);
       assert.equal(await page.locator('#tone option').count(), 20);
@@ -84,7 +85,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
         assert(clippedKeys <= 2, 'All 49 keys should fit a wide desktop screen');
       }
       // Capture desktop/mobile appearances for human review of the physical design.
-      await page.screenshot({path: 'artifacts/ek1-v0.9.5-' + name + '-' + width + '.png', fullPage:true});
+      await page.screenshot({path: 'artifacts/ek1-v0.9.6-' + name + '-' + width + '.png', fullPage:true});
       await page.locator('#tone').selectOption('5');
       assert.match(await page.locator('#displayMain').textContent(),/TRUMPET/);
       await page.locator('#playDemo').click();
@@ -141,7 +142,7 @@ for (const [name, browserType] of Object.entries({chromium, firefox, webkit})) {
       assert.equal(await page.locator('#midiLegend .channel-swatch').count(),2);
       await page.waitForFunction(()=>document.querySelector('[data-midi="60"]').dataset.channels?.split(',').length===1);
       await page.keyboard.down('q');
-      await page.waitForFunction(()=>document.querySelector('[data-midi="72"]').classList.contains('pressed'));
+      await page.waitForFunction(()=>document.querySelector('[data-midi="65"]').classList.contains('pressed'));
       await page.keyboard.up('q');
       await page.locator('#stop').click();
       assert.equal(await page.evaluate(()=>EK1.state.transport),'stopped');
