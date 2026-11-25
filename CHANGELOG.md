@@ -2,6 +2,13 @@
 
 All notable EK-1 changes follow Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
+## [1.0.0] - First stable release
+
+- First stable offline release of Electronic Keyboard (Model EK-1), consolidating the keyboard, SoundFont library, MIDI player, Song Builder, and appearance preferences.
+- Increase startup volume to 50%, retaining all existing engine trims, headroom, compression, and the maximum digital peak ceiling.
+- Reorganise the README and quick-start documentation for new users.
+- Package the verified offline ZIP and SHA-256 checksum for GitHub Releases.
+
 ## [0.9.10] - Remembered layout and dark mode
 
 - All five disclosure panels start expanded, with independently remembered open/closed states where local browser storage is available.

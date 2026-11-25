@@ -8,7 +8,9 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
  const browser=await engine.launch({headless:true,...(name==='firefox'?{firefoxUserPrefs:{'media.autoplay.default':0,'media.autoplay.blocking_policy':0}}:{})});
  try{
  const page=await browser.newPage();await page.goto(pathToFileURL(resolve('index.html')).href);
- assert.equal(await page.locator('#volume').inputValue(),'25');
+ assert.equal(await page.locator('#volume').inputValue(),'50');
+ assert.equal(await page.evaluate(()=>EK1Levels.DEFAULT_VOLUME),.5);
+ assert.equal(await page.locator('#volumeValue').innerText(),'50%');
  const peak=await page.evaluate(async()=>{
   const ctx=new OfflineAudioContext(2,48000,48000),stage=EK1Levels.create(ctx,ctx.destination,1);
   const signal=ctx.createConstantSource();signal.offset.value=10;signal.connect(stage.input);signal.start();
@@ -20,14 +22,14 @@ for(const [name,engine] of Object.entries({chromium,firefox,webkit})){
  // rendered stereo samples and output-stage gain, not a silent analyser.
  const levels=await page.evaluate(async()=>{
   const results=[];
-  for(const volume of [.25,0]){
+  for(const volume of [EK1Levels.DEFAULT_VOLUME,0]){
    const c=new OfflineAudioContext(2,24000,48000),stage=EK1Levels.create(c,c.destination,volume,{reverb:1,chorus:1});
    const a=c.createOscillator(),b=c.createOscillator(),g=c.createGain();a.frequency.value=220;b.frequency.value=440;g.gain.value=5;
    a.connect(g);b.connect(g);g.connect(stage.input);a.start();b.start();const out=await c.startRendering();
    results.push(Math.max(...[0,1].map(ch=>out.getChannelData(ch).reduce((p,n)=>Math.max(p,Math.abs(n)),0))));
   }return results;
  });
- assert(levels[0]>0&&levels[0]<=.0876,'default ceiling');assert.equal(levels[1],0,'offline mute');
+ assert(levels[0]>0&&levels[0]<=.1751,'default ceiling');assert.equal(levels[1],0,'offline mute');
  if(name!=='chromium'){console.log('PASS',name,'offline output ceiling, startup gain, mute; live transport covered by smoke tests',levels);continue;}
  // Chromium provides a measurable real-time output in CI.
  await page.locator('#volume').evaluate(el=>{el.value='100';el.dispatchEvent(new Event('input',{bubbles:true}));});

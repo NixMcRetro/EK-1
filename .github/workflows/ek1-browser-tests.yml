@@ -46,11 +46,11 @@ jobs:
       - name: Composition, project and audio export
         run: node .github/tests/ek1-composition-browser.mjs
       - name: Package exactly the tested source
-        run: git archive --format=zip --prefix=EK-1-v0.9.10/ --output=EK-1-v0.9.10-offline.zip HEAD
+        run: git archive --format=zip --prefix=EK-1-v1.0.0/ --output=EK-1-v1.0.0-offline.zip HEAD
       - uses: actions/upload-artifact@v4
         with:
-          name: EK-1-v0.9.10-offline
-          path: EK-1-v0.9.10-offline.zip
+          name: EK-1-v1.0.0-offline
+          path: EK-1-v1.0.0-offline.zip
           retention-days: 30
       - uses: actions/upload-artifact@v4
         if: always()
@@ -59,3 +59,25 @@ jobs:
           path: artifacts/
           if-no-files-found: ignore
           retention-days: 7
+
+  # Publish only the explicitly authorised first stable release, from a
+  # successful main-branch run. No publish permissions on PR test jobs.
+  release-v1:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'EK-1 v1.0.0')
+    needs: offline
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: EK-1-v1.0.0-offline
+      - name: Publish exact tested package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(node -p "require('./package.json').version")" = "1.0.0"
+          test -f EK-1-v1.0.0-offline.zip
+          sha256sum EK-1-v1.0.0-offline.zip > EK-1-v1.0.0-offline.zip.sha256
+          gh release create v1.0.0 EK-1-v1.0.0-offline.zip EK-1-v1.0.0-offline.zip.sha256 --target "$GITHUB_SHA" --title "EK-1 v1.0.0" --notes-file RELEASE-NOTES.md

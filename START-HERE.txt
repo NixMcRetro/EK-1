@@ -1,4 +1,4 @@
-EK-1 v0.9.10 - offline release candidate
+EK-1 v1.0.0 - offline release
 
 1. Extract the entire ZIP (do not open the HTML inside a ZIP preview).
 2. Double-click index.html. Keep the other files and folders beside it.
@@ -17,13 +17,12 @@ EK-1 v0.9.10 - offline release candidate
    grooves. Original keeps the earlier arrangement engine.
 7. NEW MELODY keeps the chords; NEW CHORDS + MELODY replaces both.
    PLAY SONG returns to the keyboard unless you uncheck the option.
-   Main volume starts at 25%. Keep device/headphone volume low when testing.
+   Main volume starts at 50%. Keep device/headphone volume low when testing.
 8. Use the Song Structure row to select or duplicate a section, and Undo/Redo
    to recover edits. Expand Sound options for favourites and optional effects.
 9. Save your song as an editable .ek1 project, MIDI, WAV or MP3.
 
 Original EK-1 code: GPL-3.0-or-later, without warranty. See LICENSE,
 THIRD-PARTY-NOTICES.txt, licenses/ and vendor/sources/ for licence and source information.
-This candidate has not been published to McRetro. GitHub Actions verified direct file:// operation with Chromium, Firefox
-and WebKit on Linux for the v0.9.9 candidate; see current CI for v0.9.10. Native macOS Safari and
+See GitHub Actions for release verification. Native macOS Safari and
 physical touch hardware are not yet independently tested.

@@ -31,3 +31,5 @@ LICENCE: original EK-1 application GPL-3.0-or-later; no deployment made.
 0.9.9: see CI for Classic/SoundFont MIDI repetition, loop opt-out, STOP, keyboard return and section order.
 
 0.9.10: see current CI for default panel visibility, theme switching, same-path reload persistence and unavailable-storage fallback. File URL persistence is browser-dependent.
+
+1.0.0: release verification is recorded in GitHub Actions. Startup volume is 50%; the maximum sample ceiling remains 0.35, with default output bounded by 0.175. See the exact release run for results.
