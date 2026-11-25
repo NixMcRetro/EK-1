@@ -1,6 +1,6 @@
 # 🎹 Electronic Keyboard (Model EK-1)
 
-**Version 1.0.0 | Free, open-source, offline browser instrument**
+**Version 1.0.1 | Free, open-source, offline browser instrument**
 
 EK-1 brings the feel of a classic home keyboard to your browser. Play a few notes, experiment with instruments, enjoy the built-in demo songs, or make a song of your own. No music theory required.
 
@@ -23,6 +23,7 @@ No installation, local server, account, terminal, or internet connection is requ
 - Six rhythm styles, automatic chord accompaniment, five original demonstration songs, and recording/playback.
 - Pause, resume, stop, and play along with the demos. The demo lead follows the selected voice by default, while the backing instruments retain their assignments. Switch this off in Sound options if you prefer the original lead.
 - Optional room reverb, chorus, and instrument favourites.
+- BACKING VOLUME (80% by default) balances demo backing and auto accompaniment independently of live melody. Loaded SoundFonts supply auto-accompaniment bass and chords, and percussion when the bank includes drums; otherwise built-in drums are used.
 
 | Computer key | Note or action |
 | --- | --- |

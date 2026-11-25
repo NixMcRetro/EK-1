@@ -33,3 +33,5 @@ LICENCE: original EK-1 application GPL-3.0-or-later; no deployment made.
 0.9.10: see current CI for default panel visibility, theme switching, same-path reload persistence and unavailable-storage fallback. File URL persistence is browser-dependent.
 
 1.0.0: release verification is recorded in GitHub Actions. Startup volume is 50%; the maximum sample ceiling remains 0.35, with default output bounded by 0.175. See the exact release run for results.
+
+1.0.1: see CI for sampled accompaniment, backing mute, RMS and peak checks. Actual FluidR3 and native Safari listening tests remain outstanding.
