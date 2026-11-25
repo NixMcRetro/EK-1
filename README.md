@@ -45,7 +45,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 
 Open http://127.0.0.1:8000/ in your browser. Deployed builds need HTTPS and the generated vendor/ directory. Do not distribute node_modules.
 
-1. Press OPEN SOUNDFONT and choose a local SF2 or SF3 bank (up to 128 MB).
+1. Press OPEN SOUNDFONT and choose a local SF2 or SF3 bank (up to 512 MiB).
 2. Select a melodic preset in VOICE, then play the keyboard.
 3. Open and play a MIDI file to hear the bank's instruments. For accurate instrument assignments, use a complete General MIDI bank.
 4. Choose a Classic keyboard or FM synthesis voice in the same VOICE menu to switch without unloading the bank. Use REMOVE SOUNDFONT when you want to remove it.
