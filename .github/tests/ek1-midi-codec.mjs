@@ -25,3 +25,9 @@ assert(!roundtrip.channels.includes(9));
 for(const bad of [new Uint8Array([1,2,3]),file([0,0x90,60,80]),file([0,0x90,60,255,...end]),file(end),file([0x81,0x81,0x81,0x81,0,...end])])assert.throws(()=>M.parse(bad));
 assert.throws(()=>M.encodeTake([]));
 console.log('PASS MIDI format 0/1, tempo changes, running status, sustain, drums, roundtrip and malformed input');
+
+const sampled = M.parse(M.encodeTake([{midi:60,t:0,length:1,tone:0,program:41,bankMSB:3,bankLSB:7}]));
+assert.equal(sampled.notes[0].program,41);
+assert.equal(sampled.notes[0].bankMSB,3);
+assert.equal(sampled.notes[0].bankLSB,7);
+console.log('PASS SoundFont patch roundtrip');
