@@ -1,0 +1,89 @@
+name: Refresh published EK-1 release descriptions
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/refresh-release-descriptions.yml'
+permissions:
+  contents: read
+jobs:
+  descriptions:
+    if: github.event.head_commit.message == 'docs: refresh EK-1 release descriptions'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Update only existing release descriptions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: NixMcRetro/EK-1
+        shell: bash
+        run: |
+          set -euo pipefail
+          for version in 1.0.0 1.0.1; do
+            gh api "repos/$GH_REPO/releases/tags/v$version" > "before-$version.json"
+          done
+          jq -e '.tag_name == "v1.0.0" and .target_commitish == "d86f23daab97172a589c4063cba616b814df4790" and (.draft|not) and (.prerelease|not)' before-1.0.0.json
+          jq -e '.tag_name == "v1.0.1" and .target_commitish == "7cb0b4b80876276f6676d89db85a2b5507263c04" and (.draft|not) and (.prerelease|not)' before-1.0.1.json
+          cat > notes-1.0.0.md <<'NOTES'
+          ## 🎉 Hello, EK-1!
+          
+          A little bit of 1990s keyboard nostalgia, right in your browser. This is the first stable release!
+          
+          ### ✨ What's inside?
+          
+          - 🎹 **Play:** 49 keys, 20 built-in voices, six rhythms, five original demos, and recording.
+          - 🎛️ **Explore:** Load your own SF2/SF3 SoundFonts, shape FM sounds, and add reverb or chorus.
+          - 🎵 **Jam:** Play MIDI files with colourful key lights, looping, and voice overrides.
+          - 🎼 **Create:** Build songs with four tracks, editable chords and melodies, sections, and undo/redo.
+          - 💾 **Save:** Editable projects, MIDI, WAV, and MP3 exports.
+          - 🌙 **Customise:** Light, dark, or system appearance, with remembered layout.
+          
+          ### 🚀 Get playing
+          
+          [Download the offline ZIP](https://github.com/NixMcRetro/EK-1/releases/download/v1.0.0/EK-1-v1.0.0-offline.zip), extract everything, and double-click `index.html`. No installation or server required!
+          
+          Prefer to play online? [Visit EK-1 on McRetro](https://mcretro.net/goodies/ek-1/) (latest hosted version).
+          
+          🎧 Master volume starts at 50%. Start with low device or headphone volume.
+          
+          SoundFonts are optional and not bundled. GPL-3.0-or-later; third-party licences retained. See the [changelog](https://github.com/NixMcRetro/EK-1/blob/v1.0.0/CHANGELOG.md) for details.
+          
+          **Bleep, bloop, make some music!**
+          NOTES
+          cat > notes-1.0.1.md <<'NOTES'
+          ## 🔊 A better-balanced keyboard!
+          
+          More oomph for the backing tracks, less competition from FM, and demos that keep the groove going.
+          
+          ### ✨ What's new?
+          
+          - 🎻 **Bigger SoundFont sound:** Restored the sampled engine to full gain.
+          - 🥁 **Better backing:** Improved demo and auto-accompaniment balance. Loaded SoundFonts now supply bass, chords, and drums where available.
+          - 🎚️ **You're in control:** New BACKING VOLUME slider starts at 80%.
+          - 🔁 **Keep the groove going:** Demos repeat on the musical beat grid without an intentional restart gap. Prefer one pass? Turn looping off in Sound options.
+          - 🎹 **Tamer FM:** Reduced FM engine gain to 40% so the melody sits better in the mix.
+          - 🛡️ **Same output protection:** Master volume still starts at 50%, with the existing digital peak ceiling unchanged.
+          
+          ### 🚀 Ready to play?
+          
+          [**▶ Play online on McRetro**](https://mcretro.net/goodies/ek-1/) | [**📦 Download the offline ZIP**](https://github.com/NixMcRetro/EK-1/releases/download/v1.0.1/EK-1-v1.0.1-offline.zip)
+          
+          For offline play, extract the entire ZIP and open `index.html`. No installation needed. SoundFonts are optional and remain on your device.
+          
+          🎧 Start with low device or headphone volume. No new dependencies or bundled SoundFonts. GPL-3.0-or-later; third-party notices retained.
+          
+          [Full changelog](https://github.com/NixMcRetro/EK-1/blob/v1.0.1/CHANGELOG.md) | [User guide](https://github.com/NixMcRetro/EK-1/blob/main/USER-GUIDE.md)
+          
+          **Same keyboard, better vibes. 🎶**
+          NOTES
+          for version in 1.0.0 1.0.1; do
+            gh release edit "v$version" --notes-file "notes-$version.md"
+            gh api "repos/$GH_REPO/releases/tags/v$version" > "after-$version.json"
+            jq -S '{id,tag_name,target_commitish,name,draft,prerelease,published_at,assets:[.assets[]|{id,name,digest,size}]}' "before-$version.json" > before.json
+            jq -S '{id,tag_name,target_commitish,name,draft,prerelease,published_at,assets:[.assets[]|{id,name,digest,size}]}' "after-$version.json" > after.json
+            cmp before.json after.json
+            jq -er .body "after-$version.json" > actual.md
+            diff -u <(sed -e '$a\' "notes-$version.md") actual.md
+          done
