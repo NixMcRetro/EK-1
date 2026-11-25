@@ -1,8 +1,8 @@
-/* Electronic Keyboard (Model EK-1) v0.3.0. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.4.0. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.3.0';
+  const VERSION = '0.4.0';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -108,6 +108,7 @@
   let tone = 0, rhythm = 0, tempo = 116, volume = .7, melodyOff = false, autoChord = false;
   let heldChord = null, recording = false, take = [], takeStart = 0, recordTimer = null;
   let importedMidi = null, midiName = '', importRequest = 0;
+  let bank = null, bankLoading = false;
   const held = new Map(), pending = new Set(), cancelled = new Set(), lights = new Map(), timers = new Set(), keyElements = new Map();
   const noteToMidi = s => {
     const m = /^([A-G])([#b]?)(-?[0-9]+)$/.exec(s);
@@ -180,6 +181,11 @@
     $('playMidi').textContent = transport?.type === 'midi' ? 'STOP MIDI' : 'PLAY MIDI';
     $('saveMidi').disabled = !importedMidi;
     $('openMidi').disabled = recording;
+    $('openBank').disabled = bankLoading || recording;
+    $('closeBank').disabled = !bank || bankLoading || recording;
+    $('bankPreset').disabled = !bank || bankLoading || recording;
+    $('tone').disabled = !!bank;
+    if(bankLoading)$('playMidi').disabled=true;
   }
   function createBus() {
     const bus = ctx.createGain();
@@ -288,7 +294,8 @@
     if (endTimer) { clearTimeout(endTimer); endTimer = null; }
     clearLamps();
     if (transport?.type === 'midi' && ctx) {
-      transport.active.forEach(n => n.sound.release(ctx.currentTime));
+      if (transport.sampleBank) transport.sampleBank.stopSong();
+      else transport.active.forEach(n => n.sound.release(ctx.currentTime));
     }
     if (transport?.bus && ctx) {
       const b = transport.bus, now = ctx.currentTime;
@@ -385,13 +392,13 @@
       held.set(token, { midi, sound: { release: t => sounds.forEach(s => s.release(t)) }, started: ctx.currentTime, chord: true });
       show('AUTO CHORD ' + heldChord.toUpperCase(), 'PLAY HIGHER KEYS FOR THE MELODY');
     } else {
-      const sound = voice(midi, ctx.currentTime, 0, tone, .3, master, true);
+      const sound = bank ? bank.liveOn(midi, 96) : voice(midi, ctx.currentTime, 0, tone, .3, master, true);
       held.set(token, { midi, sound, started: ctx.currentTime, tone });
       if (recording) {
-        take.push({ midi, tone, t: Math.max(0, ctx.currentTime - takeStart), length: null });
+        take.push({ midi, tone, ...(bank ? {program:bank.selected.program,bankMSB:bank.selected.bankMSB,bankLSB:bank.selected.bankLSB} : {}), t: Math.max(0, ctx.currentTime - takeStart), length: null });
         held.get(token).takeIndex = take.length - 1;
       }
-      if (transport?.type !== 'demo' && transport?.type !== 'midi') show(('0' + (tone + 1)).slice(-2) + ' ' + TONES[tone].name.toUpperCase(), 'KEY ' + label(midi) + (recording ? ' • RECORDING' : ''));
+      if (transport?.type !== 'demo' && transport?.type !== 'midi') show(bank ? bank.selected.name.toUpperCase() : ('0' + (tone + 1)).slice(-2) + ' ' + TONES[tone].name.toUpperCase(), 'KEY ' + label(midi) + (recording ? ' • RECORDING' : ''));
     }
     keyElements.get(midi)?.classList.add('pressed');
   }
@@ -466,6 +473,17 @@
     const tr=transport;
     if(!tr||tr.type!=='midi')return;
     const now=ctx.currentTime;
+    if(tr.sampleBank){
+      let work=0;
+      for(let i=tr.active.length-1;i>=0;i--)if(tr.active[i].end<=now){tr.sampleBank.songOff(tr.active[i].note);tr.active.splice(i,1);}
+      while(tr.index<tr.song.notes.length && tr.start+tr.song.notes[tr.index].time<=now+.005 && work++<128){
+        const n=tr.song.notes[tr.index++], end=tr.start+n.time+n.duration;
+        if(end<=now||tr.active.length>=64)continue;
+        tr.sampleBank.songOn(n);tr.active.push({note:n,end});lamp(n.key,now,end-now);
+      }
+      if(tr.index===tr.song.notes.length && now>=tr.start+tr.song.duration+.7){stopTransport(false);show('MIDI FINISHED','PRESS PLAY TO REPEAT');}
+      return;
+    }
     tr.active=tr.active.filter(n=>n.end>now);
     // Schedule only a short window of music. Cap per-tick work and polyphony
     // to keep even dense imported files from overwhelming the browser.
@@ -488,9 +506,9 @@
   }
   async function playMidi() {
     if(transport?.type==='midi'){stopTransport();return;}
-    if(!importedMidi||recording||!await audio())return;
+    if(!importedMidi||recording||bankLoading||!await audio())return;
     stopTransport(false);
-    transport={type:'midi',song:importedMidi,index:0,start:ctx.currentTime+.08,active:[],bus:createBus()};
+    transport={type:'midi',song:importedMidi,index:0,start:ctx.currentTime+.08,active:[],bus:createBus(),sampleBank:bank};
     loop=setInterval(midiTick,25);reflectButtons();
     show('MIDI PLAYBACK','PLAY ALONG ON THE KEYS');midiTick();
   }
@@ -498,6 +516,32 @@
     if(!take.length||recording)return;
     try{downloadMidi(EK1MIDI.encodeTake(take),'EK-1-recording.mid');midiMessage('Recording exported as MIDI.');}
     catch(e){midiMessage('Could not export recording: '+e.message);}
+  }
+  function bankMessage(message){$('bankStatus').textContent=message;}
+  async function loadBank(file){
+    if(!file||bankLoading||recording)return;
+    if(file.size>EK1SoundFont.MAX_BYTES){bankMessage('SoundFont exceeds 128 MB.');return;}
+    bankLoading=true;reflectButtons();bankMessage('Opening '+file.name+'…');
+    try{
+      if(!await audio())throw Error('Web Audio is unavailable.');
+      if(transport)stopTransport(false);stopHeld();
+      const bytes=await file.arrayBuffer();
+      // Keep the previous bank if validation or engine loading fails.
+      const next=await EK1SoundFont.create(ctx,master,bytes);
+      if(transport)stopTransport(false);stopHeld();
+      bank?.destroy();bank=next;
+      $('bankPreset').replaceChildren(...bank.presets.map((p,i)=>new Option(p.name+' ['+(p.program+1)+']',String(i))));
+      bankMessage(file.name+' | '+bank.presets.length+' melodic voices');
+      show('SOUNDFONT READY',bank.selected.name.toUpperCase());
+    }catch(e){bankMessage('Could not open SoundFont: '+e.message+(bank?' (previous bank kept)':''));}
+    finally{bankLoading=false;reflectButtons();}
+  }
+  function unloadBank(){
+    if(!bank||bankLoading||recording)return;
+    stopTransport(false);stopHeld();bank.destroy();bank=null;
+    $('bankPreset').replaceChildren(new Option('Built-in sounds',''));
+    bankMessage('Built-in sounds. Open an SF2 or SF3 bank for sampled instruments.');
+    show('EK-1 READY',TONES[tone].name.toUpperCase());reflectButtons();
   }
   function buildKeys() {
     const bed = $('keys');
@@ -633,6 +677,10 @@
     $('record').addEventListener('click', toggleRecord);
     $('playTake').addEventListener('click', playTake);
     $('clearTake').addEventListener('click', () => { take = []; stopTransport(); reflectButtons(); show('RECORDING CLEARED', 'READY TO PLAY'); });
+    $('openBank').addEventListener('click',()=> $('bankFile').click());
+    $('bankFile').addEventListener('change',e=>{const file=e.target.files[0];e.target.value='';loadBank(file);});
+    $('closeBank').addEventListener('click',unloadBank);
+    $('bankPreset').addEventListener('change',()=>{if(bank&&!recording){stopHeld();bank.select(bank.presets[Number($('bankPreset').value)]);show('SOUNDFONT VOICE',bank.selected.name.toUpperCase());}});
     $('openMidi').addEventListener('click', () => $('midiFile').click());
     $('midiFile').addEventListener('change', e => { const file=e.target.files[0]; e.target.value=''; openMidi(file); });
     $('playMidi').addEventListener('click', playMidi);
@@ -647,7 +695,7 @@
     tones: TONES.length,
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
-    get state() { return { transport: transport?.type || 'stopped', recording, takeNotes: take.length, demoIndex: transport?.type === 'demo' ? transport.song : null, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0 }; },
+    get state() { return { transport: transport?.type || 'stopped', recording, takeNotes: take.length, demoIndex: transport?.type === 'demo' ? transport.song : null, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0 }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoBars: index => SONGS[index]?.bars,
     parseBar
