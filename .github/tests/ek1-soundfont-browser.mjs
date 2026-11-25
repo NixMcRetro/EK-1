@@ -27,7 +27,9 @@ try{
  await page.waitForFunction(()=>!EK1.state.bankLoading);
  assert(await page.evaluate(()=>EK1.state.soundfont),await page.locator('#bankStatus').innerText());
  assert.equal(await page.evaluate(()=>EK1.state.bankPresets),1);
- await page.locator('#bankPreset').selectOption('0');
+ assert.equal(await page.evaluate(()=>EK1.state.engine),'soundfont');
+ assert.equal(await page.locator('#tone option').count(),21);
+ await page.locator('#tone').selectOption('sf-0');
  await page.locator('#keys [data-midi="69"]').focus();
  await page.keyboard.down('z');
  await page.waitForFunction(()=>EK1.state.sampleVoices>0);
@@ -35,15 +37,22 @@ try{
  const bytes=EK1MIDI.encodeTake([{midi:69,t:0,length:2,tone:0}]);
  await page.locator('#midiFile').setInputFiles({name:'test.mid',mimeType:'audio/midi',buffer:Buffer.from(bytes)});
  await page.waitForFunction(()=>EK1.state.midiNotes===1);
+ await page.locator('#tone').selectOption('fm-2');
+ assert.equal(await page.evaluate(()=>EK1.state.engine),'fm');
+ assert(await page.evaluate(()=>EK1.state.soundfont),'Bank must stay loaded in FM mode');
  await page.locator('#playMidi').click();
  await page.waitForFunction(()=>EK1.state.transport==='midi'&&EK1.state.sampleVoices>0);
  await page.locator('#stop').click();
  await page.waitForFunction(()=>EK1.state.sampleVoices===0);
+ await page.locator('#tone').selectOption('sf-0');
+ assert.equal(await page.evaluate(()=>EK1.state.engine),'soundfont');
  await page.locator('#bankFile').setInputFiles({name:'broken.sf2',mimeType:'application/octet-stream',buffer:Buffer.from([1,2,3])});
  await page.waitForFunction(()=>document.querySelector('#bankStatus').textContent.includes('Could not open'));
  assert(await page.evaluate(()=>EK1.state.soundfont));
  await page.locator('#closeBank').click();
  assert.equal(await page.evaluate(()=>EK1.state.soundfont),false);
+ assert.equal(await page.evaluate(()=>EK1.state.engine),'classic');
+ assert.equal(await page.locator('#tone option').count(),20);
  assert.deepEqual(errors,[]);
  console.log('PASS actual SoundFont loading, live sample voice, imported MIDI, stop, invalid file and fallback');
 }finally{await browser.close();await new Promise(r=>server.close(r));}
