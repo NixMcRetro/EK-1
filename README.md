@@ -2,7 +2,7 @@
 
 A simple, 1990s home-keyboard-inspired instrument that plays in your browser.
 
-**Development version: 0.4.0**
+**Development version: 0.5.0**
 
 Play a 49-key electronic keyboard, choose from 12 instrument tones and 6 rhythms, and listen to five original built-in demo songs. Includes one-finger chord accompaniment, a melody-off play-along mode, and basic note recording.
 
@@ -48,9 +48,19 @@ The bank is processed in your browser and is never uploaded or persisted. A sepa
 
 The optional AudioWorklet engine is [SpessaSynth](https://github.com/spessasus/spessasynth_lib), Apache-2.0 licensed; the build copies upstream licence/notice files into vendor/. No CDN or remote sound-bank requests are made at runtime.
 
+## FM synthesis
+
+Press FM SYNTH below the keyboard and choose one of eight original voices: Electric Tines, Crystal Bells, Rubber Bass, Digital Brass, Glass Pad, Reed Lead, Drawbar Organ and Digital Pluck.
+
+Brightness changes frequency-modulation depth; Attack changes the onset time; Release changes the fade after lifting a key. Settings apply to newly played notes. RESET SOUND restores the preset envelope and modulation depth. Toggle FM SYNTH off to return to built-in voices. Loading a SoundFont also returns the FM switch to off.
+
+The native Web Audio engine uses six sine-wave operators per note with independent amplitude envelopes and several routing topologies. It does not emulate the Yamaha DX7, import DX7 SysEx patches, or implement its exact algorithms. All voice settings are original. FM recordings preserve their settings for in-memory playback, while MIDI export uses an approximate standard program number; a MIDI file does not store the FM patch. Imported MIDI, demo songs and rhythm accompaniment continue using the established playback engines.
+
+FM works without external dependencies, including in the standalone HTML preview.
+
 ## Development status
 
-Version `0.4.0` introduces optional SoundFont synthesis, and is not a stable `1.0.0`. Note recordings currently live in memory and disappear when the page reloads. They capture played notes, not the full accompanying rhythm track.
+Version `0.5.0` introduces original six-operator FM synthesis, and is not a stable `1.0.0`. Note recordings currently live in memory and disappear when the page reloads. They capture played notes, not the full accompanying rhythm track.
 
 The included tones are created using Web Audio synthesis, not sampled patches from an existing manufacturer.
 
@@ -63,7 +73,8 @@ EK-1 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) with `MA
 - `0.2.1`: compatible visual or control fixes
 - `0.3.0`: MIDI file import, multichannel playback and export
 - `0.4.0`: optional SF2/SF3 playback with a locally built AudioWorklet engine
-- `0.5.0`: proposed FM synthesis
+- `0.5.0`: original six-operator FM synthesis and eight voices
+- `0.6.0`: proposed industrial interface refinement
 - `1.0.0`: first stable release
 - After `1.0.0`: PATCH for compatible fixes, MINOR for compatible features, MAJOR for breaking changes
 
@@ -72,12 +83,14 @@ EK-1 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) with `MA
 ```sh
 node --check app.js
 node --check midi.js
+node --check fm.js
 node .github/tests/ek1-midi-codec.mjs
 npm install
 npm run build
 npx playwright install chromium firefox webkit
 node .github/tests/ek1-browser-smoke.mjs
 node .github/tests/ek1-soundfont-browser.mjs
+node .github/tests/ek1-fm-audio.mjs
 ```
 
 The application is self-contained and has no connection to the retired OP-1 browser project.
