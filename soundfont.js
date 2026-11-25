@@ -44,7 +44,7 @@
       let selected=presets[0], disposed=false;
       synth.connect(destination);
       function select(p){
-        synth.controllerChange(live,120,0);counts.clear();selected=p;
+        synth.controllerChange(live,120,0);for(let k=0;k<128;k++)counts.delete(live*128+k);selected=p;
         synth.controllerChange(live,0,p.bankMSB);synth.controllerChange(live,32,p.bankLSB);synth.programChange(live,p.program);
       }
       select(selected);
@@ -67,7 +67,7 @@
         presets,get selected(){return selected;},get voices(){return synth.voiceCount;},
         select,
         liveOn(key,velocity){on(live,key,velocity);let released=false;return {release(){if(!released){released=true;off(live,key);}}};},
-        songOn(n){on(n.channel,n.key,n.velocity,n.channel===9?undefined:n.program);},
+        songOn(n){if(n.channel!==9){synth.controllerChange(n.channel,0,n.bankMSB||0);synth.controllerChange(n.channel,32,n.bankLSB||0);}on(n.channel,n.key,n.velocity,n.channel===9?undefined:n.program);},
         songOff(n){off(n.channel,n.key);},
         stopSong,
         destroy(){if(!disposed){disposed=true;synth.stopAll(true);synth.destroy();counts.clear();}}
