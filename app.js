@@ -1,8 +1,8 @@
-/* Electronic Keyboard (Model EK-1) v0.5.0. Original, offline-capable Web Audio instrument. */
+/* Electronic Keyboard (Model EK-1) v0.6.0. Original, offline-capable Web Audio instrument. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const VERSION = '0.5.0';
+  const VERSION = '0.6.0';
   const FIRST = 48, LAST = 96, STEPS_PER_BAR = 16;
   const SHARPS = new Set([1, 3, 6, 8, 10]);
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -109,7 +109,7 @@
   let heldChord = null, recording = false, take = [], takeStart = 0, recordTimer = null;
   let importedMidi = null, midiName = '', importRequest = 0;
   let bank = null, bankLoading = false;
-  let fmEnabled=false, fmIndex=0;
+  let engine='classic', fmIndex=0, bankVoiceIndex=0, bankGeneration=0;
   const fmSettings={brightness:1,attack:1,release:1};
   const held = new Map(), pending = new Set(), cancelled = new Set(), lights = new Map(), timers = new Set(), keyElements = new Map();
   const noteToMidi = s => {
@@ -185,11 +185,10 @@
     $('openMidi').disabled = recording;
     $('openBank').disabled = bankLoading || recording || !!window.EK1Standalone;
     $('closeBank').disabled = !bank || bankLoading || recording;
-    $('bankPreset').disabled = !bank || bankLoading || recording;
-    $('tone').disabled = !!bank || fmEnabled;
-    $('fmToggle').disabled = bankLoading || recording;
-    $('fmToggle').setAttribute('aria-pressed',String(fmEnabled));
-    for(const id of ['fmPreset','fmBrightness','fmAttack','fmRelease','fmReset'])$(id).disabled=!fmEnabled||recording||bankLoading;
+    $('tone').disabled = recording || bankLoading;
+    $('activeEngine').textContent = engine==='soundfont'?'SOUNDFONT':engine==='fm'?'FM':'CLASSIC';
+    $('fmPanel').hidden = engine!=='fm';
+    for(const id of ['fmBrightness','fmAttack','fmRelease','fmReset'])$(id).disabled=engine!=='fm'||recording||bankLoading;
     $('record').disabled = bankLoading;
     if(bankLoading)$('playMidi').disabled=true;
   }
@@ -398,13 +397,13 @@
       held.set(token, { midi, sound: { release: t => sounds.forEach(s => s.release(t)) }, started: ctx.currentTime, chord: true });
       show('AUTO CHORD ' + heldChord.toUpperCase(), 'PLAY HIGHER KEYS FOR THE MELODY');
     } else {
-      const sound = bank ? bank.liveOn(midi, 96) : fmEnabled ? EK1FM.voice(ctx,master,midi,ctx.currentTime,0,fmIndex,fmSettings,.38,true) : voice(midi, ctx.currentTime, 0, tone, .3, master, true);
+      const sound = engine==='soundfont' && bank ? bank.liveOn(midi, 96) : engine==='fm' ? EK1FM.voice(ctx,master,midi,ctx.currentTime,0,fmIndex,fmSettings,.38,true) : voice(midi, ctx.currentTime, 0, tone, .3, master, true);
       held.set(token, { midi, sound, started: ctx.currentTime, tone });
       if (recording) {
-        take.push({ midi, tone:fmEnabled?EK1FM.presets[fmIndex].tone:tone, ...(fmEnabled?{fm:{index:fmIndex,settings:{...fmSettings}},program:EK1FM.presets[fmIndex].program}:{}), ...(bank ? {program:bank.selected.program,bankMSB:bank.selected.bankMSB,bankLSB:bank.selected.bankLSB} : {}), t: Math.max(0, ctx.currentTime - takeStart), length: null });
+        take.push({ midi, tone:engine==='fm'?EK1FM.presets[fmIndex].tone:engine==='soundfont'&&bank?EK1MIDI.toneFor(bank.selected.program):tone, ...(engine==='fm'?{fm:{index:fmIndex,settings:{...fmSettings}},program:EK1FM.presets[fmIndex].program}:{}), ...(engine==='soundfont'&&bank ? {program:bank.selected.program,bankMSB:bank.selected.bankMSB,bankLSB:bank.selected.bankLSB,bankGeneration} : {}), t: Math.max(0, ctx.currentTime - takeStart), length: null });
         held.get(token).takeIndex = take.length - 1;
       }
-      if (transport?.type !== 'demo' && transport?.type !== 'midi') show(bank ? bank.selected.name.toUpperCase() : fmEnabled ? EK1FM.presets[fmIndex].name.toUpperCase() : ('0' + (tone + 1)).slice(-2) + ' ' + TONES[tone].name.toUpperCase(), 'KEY ' + label(midi) + (recording ? ' • RECORDING' : ''));
+      if (transport?.type !== 'demo' && transport?.type !== 'midi') show(voiceLabel(), 'KEY ' + label(midi) + (recording ? ' • RECORDING' : ''));
     }
     keyElements.get(midi)?.classList.add('pressed');
   }
@@ -439,7 +438,7 @@
     if (!take.length || recording || !await audio()) return;
     stopTransport(false);
     const bus = createBus();
-    if(bank && take.some(n=>n.program!==undefined) && !take.some(n=>n.fm)){
+    if(bank && take.every(n=>n.bankGeneration===bankGeneration)){
       transport={type:'take',song:EK1MIDI.parse(EK1MIDI.encodeTake(take)),index:0,start:ctx.currentTime+.08,active:[],bus,sampleBank:bank};
       loop=setInterval(midiTick,25);reflectButtons();show('PLAYING RECORDING',take.length+' NOTES');midiTick();return;
     }
@@ -454,7 +453,7 @@
     const end = Math.max(...take.map(n => n.t + (n.length || .12)));
     endTimer = setTimeout(() => { stopTransport(); show('PLAYBACK FINISHED', take.length + ' RECORDED NOTES'); }, (end + .8) * 1000);
     reflectButtons();
-    show('PLAYING RECORDING', take.length + ' NOTES');
+    show('PLAYING RECORDING', take.some(n=>n.bankGeneration!==undefined)?'ORIGINAL BANK UNAVAILABLE':take.length + ' NOTES');
   }
   // File selection never uploads data; the codec processes bytes in this tab.
   function midiMessage(text) { $('midiStatus').textContent = text; }
@@ -528,20 +527,44 @@
     try{downloadMidi(EK1MIDI.encodeTake(take),'EK-1-recording.mid');midiMessage('Recording exported as MIDI.');}
     catch(e){midiMessage('Could not export recording: '+e.message);}
   }
+  function voiceLabel(){
+    if(engine==='soundfont'&&bank)return bank.selected.name.toUpperCase();
+    if(engine==='fm')return EK1FM.presets[fmIndex].name.toUpperCase();
+    return String(tone+1).padStart(2,'0')+' '+TONES[tone].name.toUpperCase();
+  }
+  function rebuildVoices(){
+    const group=(label,options)=>{
+      const g=document.createElement('optgroup');g.label=label;
+      options.forEach(o=>g.append(o));return g;
+    };
+    const groups=[
+      group('Classic keyboard',TONES.map((p,i)=>new Option(String(i+1).padStart(2,'0')+' '+p.name,String(i)))),
+      group('FM synthesis',EK1FM.presets.map((p,i)=>new Option('FM '+String(i+1).padStart(2,'0')+' '+p.name,'fm-'+i)))
+    ];
+    if(bank)groups.push(group('SoundFont',bank.presets.map((p,i)=>new Option(p.name+' ['+(p.program+1)+']','sf-'+i))));
+    $('tone').replaceChildren(...groups);
+    $('tone').value=engine==='fm'?'fm-'+fmIndex:engine==='soundfont'?'sf-'+bankVoiceIndex:String(tone);
+  }
   function updateFM(){
-    $('fmStatus').textContent=fmEnabled?'FM active | '+EK1FM.presets[fmIndex].name:'Eight original digital voices. Switch on FM to play.';
     for(const [key,id] of [['brightness','fmBrightness'],['attack','fmAttack'],['release','fmRelease']]){
       $(id).value=String(Math.round(fmSettings[key]*100));
       $(id+'Value').textContent=$(id).value+'%';
     }
     reflectButtons();
   }
-  function toggleFM(){
+  function selectVoice(){
     if(recording||bankLoading)return;
-    if(ctx){stopTransport(false);stopHeld();}
-    if(bank)unloadBank();
-    fmEnabled=!fmEnabled;updateFM();
-    show(fmEnabled?'FM SYNTHESIS':'EK-1 READY',fmEnabled?EK1FM.presets[fmIndex].name.toUpperCase():TONES[tone].name.toUpperCase());
+    const value=$('tone').value;
+    if(ctx)stopHeld();
+    if(value.startsWith('fm-')){
+      engine='fm';fmIndex=Number(value.slice(3));
+    }else if(value.startsWith('sf-')&&bank){
+      engine='soundfont';bankVoiceIndex=Number(value.slice(3));bank.select(bank.presets[bankVoiceIndex]);
+    }else{
+      engine='classic';tone=Number(value);
+    }
+    updateFM();
+    show(voiceLabel(),engine==='fm'?'FM VOICE':engine==='soundfont'?'SOUNDFONT VOICE':'READY TO PLAY');
   }
   function bankMessage(message){$('bankStatus').textContent=message;}
   async function loadBank(file){
@@ -555,8 +578,7 @@
       // Keep the previous bank if validation or engine loading fails.
       const next=await EK1SoundFont.create(ctx,master,bytes);
       if(transport)stopTransport(false);stopHeld();
-      bank?.destroy();bank=next;fmEnabled=false;updateFM();
-      $('bankPreset').replaceChildren(...bank.presets.map((p,i)=>new Option(p.name+' ['+(p.program+1)+']',String(i))));
+      bank?.destroy();bank=next;bankGeneration++;bankVoiceIndex=0;engine='soundfont';rebuildVoices();updateFM();
       bankMessage(file.name+' | '+bank.presets.length+' melodic voices');
       show('SOUNDFONT READY',bank.selected.name.toUpperCase());
     }catch(e){bankMessage('Could not open SoundFont: '+e.message+(bank?' (previous bank kept)':''));}
@@ -565,9 +587,10 @@
   function unloadBank(){
     if(!bank||bankLoading||recording)return;
     stopTransport(false);stopHeld();bank.destroy();bank=null;
-    $('bankPreset').replaceChildren(new Option('Built-in sounds',''));
-    bankMessage('Built-in sounds. Open an SF2 or SF3 bank for sampled instruments.');
-    show('EK-1 READY',TONES[tone].name.toUpperCase());reflectButtons();
+    if(engine==='soundfont')engine='classic';
+    rebuildVoices();updateFM();
+    bankMessage('20 built-in voices. Add a local SoundFont to expand the voice menu.');
+    show(voiceLabel(),'READY TO PLAY');
   }
   function buildKeys() {
     const bed = $('keys');
@@ -651,10 +674,10 @@
     document.addEventListener('visibilitychange', () => { if (document.hidden && ctx) stopHeld(); });
   }
   function initialize() {
-    $('tone').replaceChildren(...TONES.map((p, i) => new Option(('0' + (i + 1)).slice(-2) + ' ' + p.name, String(i))));
+    rebuildVoices();
     $('rhythm').replaceChildren(...RHYTHMS.map((p, i) => new Option(('0' + (i + 1)).slice(-2) + ' ' + p.name, String(i))));
     $('demoSong').replaceChildren(...SONGS.map((p, i) => new Option(('0' + (i + 1)).slice(-2) + ' ' + p.title, String(i))));
-    $('tone').addEventListener('change', () => { tone = Number($('tone').value); show(('0' + (tone + 1)).slice(-2) + ' ' + TONES[tone].name.toUpperCase(), 'READY TO PLAY'); });
+    $('tone').addEventListener('change', selectVoice);
     $('rhythm').addEventListener('change', () => { rhythm = Number($('rhythm').value); if (transport?.type === 'rhythm') beginRhythm(); else show(RHYTHMS[rhythm].name.toUpperCase(), 'RHYTHM SELECTED'); });
     $('tempo').addEventListener('input', () => {
       tempo = Number($('tempo').value);
@@ -703,9 +726,7 @@
     $('record').addEventListener('click', toggleRecord);
     $('playTake').addEventListener('click', playTake);
     $('clearTake').addEventListener('click', () => { take = []; stopTransport(); reflectButtons(); show('RECORDING CLEARED', 'READY TO PLAY'); });
-    $('fmPreset').replaceChildren(...EK1FM.presets.map((p,i)=>new Option(String(i+1).padStart(2,'0')+' '+p.name,String(i))));
-    $('fmToggle').addEventListener('click',toggleFM);
-    $('fmPreset').addEventListener('change',()=>{if(ctx)stopHeld();fmIndex=Number($('fmPreset').value);updateFM();show('FM VOICE',EK1FM.presets[fmIndex].name.toUpperCase());});
+
     for(const [key,id] of [['brightness','fmBrightness'],['attack','fmAttack'],['release','fmRelease']]){
       $(id).addEventListener('input',()=>{fmSettings[key]=Number($(id).value)/100;$(id+'Value').textContent=$(id).value+'%';});
     }
@@ -713,7 +734,7 @@
     $('openBank').addEventListener('click',()=> $('bankFile').click());
     $('bankFile').addEventListener('change',e=>{const file=e.target.files[0];e.target.value='';loadBank(file);});
     $('closeBank').addEventListener('click',unloadBank);
-    $('bankPreset').addEventListener('change',()=>{if(bank&&!recording){stopHeld();bank.select(bank.presets[Number($('bankPreset').value)]);show('SOUNDFONT VOICE',bank.selected.name.toUpperCase());}});
+
     $('openMidi').addEventListener('click', () => $('midiFile').click());
     $('midiFile').addEventListener('change', e => { const file=e.target.files[0]; e.target.value=''; openMidi(file); });
     $('playMidi').addEventListener('click', playMidi);
@@ -728,7 +749,7 @@
     tones: TONES.length,
     rhythms: RHYTHMS.length,
     demos: SONGS.length,
-    get state() { return { transport: transport?.type || 'stopped', recording, takeNotes: take.length, demoIndex: transport?.type === 'demo' ? transport.song : null, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, fmEnabled, fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
+    get state() { return { transport: transport?.type || 'stopped', recording, takeNotes: take.length, demoIndex: transport?.type === 'demo' ? transport.song : null, autoChord, melodyOff, midiNotes: importedMidi?.notes.length || 0, midiChannels: importedMidi?.channels.length || 0, soundfont: !!bank, bankLoading, bankPresets: bank?.presets.length || 0, sampleVoices: bank?.voices || 0, engine, fmEnabled:engine==='fm', fmIndex, fmPresets:EK1FM.presets.length, fmSettings:{...fmSettings} }; },
     demoEvents: index => SONGS[index]?.events.map(e => ({...e})),
     demoBars: index => SONGS[index]?.bars,
     parseBar
