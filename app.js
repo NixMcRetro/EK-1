@@ -310,7 +310,7 @@
     }
     transport = null;
     reflectButtons();
-    if (announce) show('EK-1 READY', TONES[tone].name.toUpperCase());
+    if (announce) show('EK-1 READY', voiceLabel());
   }
   function scheduleStep() {
     if (!transport) return;
